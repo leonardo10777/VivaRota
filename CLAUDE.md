@@ -22,7 +22,7 @@ MVP em desenvolvimento.
 
 ## Stack de Tecnologias
 
-- **Frontend:** React Native
+- **Frontend:** React Native + Expo
 - **Backend:** Spring Boot v4.0.5 (Java 17)
 - **Banco de Dados:** PostgreSQL 17 + PostGIS 3.6
 - **ORM:** Hibernate com Hibernate Spatial
