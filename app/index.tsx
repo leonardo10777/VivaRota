@@ -3,7 +3,7 @@ import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-MapboxGL.setAccessToken('pk.eyJ1IjoibGVvd29yazIwIiwiYSI6ImNtb2RtdmZ5eDA0Zjgyd29rdm15Z3V0bGkifQ.EXpJbB1TkTN2zHkxuDaM9Q');
+MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 
 export default function MapScreen() {
   const [location, setLocation] = useState<[number, number] | null>(null);
