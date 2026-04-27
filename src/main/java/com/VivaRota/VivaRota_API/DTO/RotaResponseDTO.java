@@ -12,6 +12,9 @@ public class RotaResponseDTO {
     private Double origemLng;
     private Double destinoLat;
     private Double destinoLng;
+    private RotaOpcaoDTO rotaSegura;
+    private RotaOpcaoDTO rotaRapida;
+    private RotaOpcaoDTO rotaEquilibrada;
 
     // Waypoints que o Mapbox vai usar para desenhar a rota no front
     // Cada ponto é [longitude, latitude] seguindo padrão GeoJSON
@@ -19,6 +22,15 @@ public class RotaResponseDTO {
 
     // Incidentes próximos à rota para exibir no mapa
     private List<IncidenteResponseDTO> incidentesNaRota;
+
+
+    public RotaResponseDTO(RotaOpcaoDTO rotaSegura,
+                           RotaOpcaoDTO rotaRapida,
+                           RotaOpcaoDTO rotaEquilibrada) {
+        this.rotaSegura      = rotaSegura;
+        this.rotaRapida      = rotaRapida;
+        this.rotaEquilibrada = rotaEquilibrada;
+    }
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -46,4 +58,28 @@ public class RotaResponseDTO {
 
     public List<IncidenteResponseDTO> getIncidentesNaRota() { return incidentesNaRota; }
     public void setIncidentesNaRota(List<IncidenteResponseDTO> incidentesNaRota) { this.incidentesNaRota = incidentesNaRota; }
+
+    public RotaOpcaoDTO getRotaSegura() {
+        return rotaSegura;
+    }
+
+    public void setRotaSegura(RotaOpcaoDTO rotaSegura) {
+        this.rotaSegura = rotaSegura;
+    }
+
+    public RotaOpcaoDTO getRotaRapida() {
+        return rotaRapida;
+    }
+
+    public void setRotaRapida(RotaOpcaoDTO rotaRapida) {
+        this.rotaRapida = rotaRapida;
+    }
+
+    public RotaOpcaoDTO getRotaEquilibrada() {
+        return rotaEquilibrada;
+    }
+
+    public void setRotaEquilibrada(RotaOpcaoDTO rotaEquilibrada) {
+        this.rotaEquilibrada = rotaEquilibrada;
+    }
 }

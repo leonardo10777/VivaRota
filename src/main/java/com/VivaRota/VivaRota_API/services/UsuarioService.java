@@ -6,12 +6,14 @@ import com.VivaRota.VivaRota_API.entities.Usuario;
 import com.VivaRota.VivaRota_API.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,7 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class UsuarioService {
+public class UsuarioService implements UserDetailsService { // ← adicionar
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -27,9 +29,19 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // ← adicionar esse método obrigatório do UserDetailsService
+    @Override
+    public UserDetails loadUserByUsername(String email)
+            throws UsernameNotFoundException {
+        return usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "Usuário não encontrado: " + email));
+    }
+
     public Usuario findById(Integer id) {
         return usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Usuário não encontrado."));
     }
 
     public List<Usuario> findAll() {
@@ -38,7 +50,8 @@ public class UsuarioService {
 
     public Usuario cadastrarUsuario(UsuarioCadastroDTO dto, MultipartFile imagem) {
         if (usuarioRepository.findByEmail(dto.getEmail()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "E-mail já cadastrado.");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "E-mail já cadastrado.");
         }
 
         Usuario usuario = new Usuario();
@@ -60,7 +73,8 @@ public class UsuarioService {
 
         Optional<Usuario> existente = usuarioRepository.findByEmail(dto.getEmail());
         if (existente.isPresent() && !existente.get().getId().equals(id)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "E-mail já em uso.");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "E-mail já em uso.");
         }
 
         alterado.setNome(dto.getNome());
@@ -84,7 +98,8 @@ public class UsuarioService {
 
     private void salvarImagem(Usuario usuario, MultipartFile imagem) {
         try {
-            String nomeArquivo = System.currentTimeMillis() + "_" + imagem.getOriginalFilename();
+            String nomeArquivo = System.currentTimeMillis() + "_"
+                    + imagem.getOriginalFilename();
             Path caminho = Paths.get("uploads").resolve(nomeArquivo);
             Files.createDirectories(caminho.getParent());
             Files.copy(imagem.getInputStream(), caminho);

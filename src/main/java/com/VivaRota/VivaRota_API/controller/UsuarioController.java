@@ -34,6 +34,16 @@ public class UsuarioController {
         return ResponseEntity.ok(lista);
     }
 
+    @PostMapping("/cadastro")
+    public ResponseEntity<UsuarioResponseDTO> cadastrarJson(
+            @RequestBody @Valid UsuarioCadastroDTO dto) {
+
+        Usuario novo = usuarioService.cadastrarUsuario(dto, null);
+        URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
+                .buildAndExpand(novo.getId()).toUri();
+        return ResponseEntity.created(uri).body(new UsuarioResponseDTO(novo));
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UsuarioResponseDTO> cadastrar(
             @RequestPart("usuario") @Valid UsuarioCadastroDTO dto,
