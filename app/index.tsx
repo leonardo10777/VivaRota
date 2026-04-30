@@ -1,5 +1,7 @@
 import { BuscaDestino } from '@/components/BuscaDestino';
+import { MarkerIncidente } from '@/components/MarkerIncidente';
 import { RotaMapa } from '@/components/RotaMapa';
+import { Incidente, MOCK_INCIDENTES } from '@/constants/mockIncidentes';
 import { useRota } from '@/hooks/useRota';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
@@ -54,6 +56,11 @@ export default function MapScreen() {
     selecionarSugestao(sugestao, location);
   };
 
+  const handlePressIncidente = (incidente: Incidente) => {
+    console.log('Incidente selecionado:', incidente);
+    // TODO: abrir tela de detalhe do alerta
+  };
+
   if (errorMsg) {
     return (
       <View style={styles.center}>
@@ -81,6 +88,13 @@ export default function MapScreen() {
         />
         <MapboxGL.UserLocation visible={true} />
 
+        {/* Marcadores de incidentes */}
+        <MarkerIncidente
+          incidentes={MOCK_INCIDENTES}
+          onPress={handlePressIncidente}
+        />
+
+        {/* Rota no mapa */}
         {rota && destino && (
           <RotaMapa
             coordenadas={rota.coordenadas}
@@ -89,6 +103,7 @@ export default function MapScreen() {
         )}
       </MapboxGL.MapView>
 
+      {/* Input de busca com autocomplete */}
       <BuscaDestino
         onBuscar={handleBuscar}
         onLimpar={limparRota}
