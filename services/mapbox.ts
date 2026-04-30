@@ -16,7 +16,7 @@ export async function geocodificarEndereco(
   return [lng, lat];
 }
 
-
+// Calcula rota a pé entre dois pontos
 export async function calcularRota(
   origem: [number, number],
   destino: [number, number]
@@ -44,4 +44,25 @@ export async function calcularRota(
     : `${minutos} min`;
 
   return { coordenadas, distancia, duracao };
+}
+
+// Busca sugestões de endereço enquanto o usuário digita (autocomplete)
+export async function buscarSugestoes(
+  texto: string
+): Promise<{ nome: string; lugar: string; coordenadas: [number, number] }[]> {
+  if (texto.trim().length < 3) return [];
+
+  const query = encodeURIComponent(texto);
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${TOKEN}&language=pt&country=BR&limit=5&types=address,place`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!data.features) return [];
+
+  return data.features.map((f: any) => ({
+    nome: f.text,
+    lugar: f.place_name,
+    coordenadas: f.center as [number, number],
+  }));
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   StyleSheet,
   Text,
   TextInput,
@@ -8,10 +9,20 @@ import {
   View,
 } from 'react-native';
 
+interface Sugestao {
+  nome: string;
+  lugar: string;
+  coordenadas: [number, number];
+}
+
 interface Props {
   onBuscar: (endereco: string) => void;
   onLimpar: () => void;
+  onSelecionarSugestao: (sugestao: Sugestao) => void;
+  onChangeTexto: (texto: string) => void;
   carregando: boolean;
+  sugestoes: Sugestao[];
+  buscandoSugestoes: boolean;
   distancia?: string;
   duracao?: string;
   erro?: string | null;
@@ -20,15 +31,29 @@ interface Props {
 export function BuscaDestino({
   onBuscar,
   onLimpar,
+  onSelecionarSugestao,
+  onChangeTexto,
   carregando,
+  sugestoes,
+  buscandoSugestoes,
   distancia,
   duracao,
   erro,
 }: Props) {
   const [texto, setTexto] = useState('');
 
+  const handleChangeTexto = (value: string) => {
+    setTexto(value);
+    onChangeTexto(value);
+  };
+
   const handleBuscar = () => {
     if (texto.trim()) onBuscar(texto);
+  };
+
+  const handleSelecionarSugestao = (sugestao: Sugestao) => {
+    setTexto(sugestao.lugar);
+    onSelecionarSugestao(sugestao);
   };
 
   const handleLimpar = () => {
@@ -45,11 +70,11 @@ export function BuscaDestino({
           placeholder="Digite o endereço de destino..."
           placeholderTextColor="#999"
           value={texto}
-          onChangeText={setTexto}
+          onChangeText={handleChangeTexto}
           onSubmitEditing={handleBuscar}
           returnKeyType="search"
         />
-        {carregando ? (
+        {carregando || buscandoSugestoes ? (
           <ActivityIndicator style={styles.btn} color="#4a9ff0" />
         ) : (
           <TouchableOpacity style={styles.btn} onPress={handleBuscar}>
@@ -58,10 +83,31 @@ export function BuscaDestino({
         )}
       </View>
 
-      {/* Erro */}
-      {erro && (
-        <Text style={styles.erro}>{erro}</Text>
+      {/* Lista de sugestões */}
+      {sugestoes.length > 0 && (
+        <View style={styles.sugestoesContainer}>
+          <FlatList
+            data={sugestoes}
+            keyExtractor={(item) => item.lugar}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.sugestaoItem}
+                onPress={() => handleSelecionarSugestao(item)}
+              >
+                <Text style={styles.sugestaoNome}>{item.nome}</Text>
+                <Text style={styles.sugestaoLugar} numberOfLines={1}>
+                  {item.lugar}
+                </Text>
+              </TouchableOpacity>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separador} />}
+          />
+        </View>
       )}
+
+      {/* Erro */}
+      {erro && <Text style={styles.erro}>{erro}</Text>}
 
       {/* Info da rota */}
       {distancia && duracao && (
@@ -108,6 +154,35 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontSize: 18,
+  },
+  sugestoesContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginTop: 4,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    maxHeight: 220,
+  },
+  sugestaoItem: {
+    padding: 14,
+  },
+  sugestaoNome: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  sugestaoLugar: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  separador: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
+    marginHorizontal: 14,
   },
   erro: {
     marginTop: 6,

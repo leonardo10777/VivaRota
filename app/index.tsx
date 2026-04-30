@@ -1,10 +1,10 @@
+import { BuscaDestino } from '@/components/BuscaDestino';
+import { RotaMapa } from '@/components/RotaMapa';
+import { useRota } from '@/hooks/useRota';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { RotaMapa } from '@/components/RotaMapa';
-import { BuscaDestino } from '@/components/BuscaDestino';
-import { useRota } from '@/hooks/useRota';
 
 MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 
@@ -13,7 +13,18 @@ export default function MapScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const cameraRef = useRef<MapboxGL.Camera>(null);
 
-  const { destino, rota, carregando, erro, buscarRota, limparRota } = useRota();
+  const {
+    destino,
+    rota,
+    carregando,
+    erro,
+    sugestoes,
+    buscandoSugestoes,
+    buscarRota,
+    buscarSugestoesEndereco,
+    selecionarSugestao,
+    limparRota,
+  } = useRota();
 
   useEffect(() => {
     (async () => {
@@ -27,7 +38,6 @@ export default function MapScreen() {
     })();
   }, []);
 
-  // Centraliza câmera na rota quando encontrada
   useEffect(() => {
     if (rota && destino && location) {
       cameraRef.current?.fitBounds(destino, location, [80, 80, 80, 80], 1000);
@@ -37,6 +47,11 @@ export default function MapScreen() {
   const handleBuscar = (endereco: string) => {
     if (!location) return;
     buscarRota(endereco, location);
+  };
+
+  const handleSelecionarSugestao = (sugestao: any) => {
+    if (!location) return;
+    selecionarSugestao(sugestao, location);
   };
 
   if (errorMsg) {
@@ -66,7 +81,6 @@ export default function MapScreen() {
         />
         <MapboxGL.UserLocation visible={true} />
 
-        {/* Rota no mapa */}
         {rota && destino && (
           <RotaMapa
             coordenadas={rota.coordenadas}
@@ -75,11 +89,14 @@ export default function MapScreen() {
         )}
       </MapboxGL.MapView>
 
-      {/* Input de busca — sobre o mapa */}
       <BuscaDestino
         onBuscar={handleBuscar}
         onLimpar={limparRota}
+        onSelecionarSugestao={handleSelecionarSugestao}
+        onChangeTexto={buscarSugestoesEndereco}
         carregando={carregando}
+        sugestoes={sugestoes}
+        buscandoSugestoes={buscandoSugestoes}
         distancia={rota?.distancia}
         duracao={rota?.duracao}
         erro={erro}
