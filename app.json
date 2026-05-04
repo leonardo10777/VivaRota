@@ -34,9 +34,10 @@
       [
         "@rnmapbox/maps",
         {
-         "RNMapboxMapsDownloadToken": ""
+          "RNMapboxMapsDownloadToken": "sk.eyJ1IjoibGVvd29yazIwIiwiYSI6ImNtb2RudmpmODA1NncycW9rOGVnYWpxdDcifQ.V9Yy34mnvWFCXpksb2PJXw"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
@@ -44,7 +45,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "13504041-52ea-4759-858c-b5203d65d0f5"
+        "projectId": "55790b75-a36c-4907-bf00-189ad5603cd1"
       }
     }
   }

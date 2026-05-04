@@ -1,4 +1,7 @@
+import { router } from "expo-router";
+import { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -9,13 +12,15 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useState } from "react";
-import { router } from "expo-router";
+
+import { useAuthStore } from "@/services/authStore";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erros, setErros] = useState({ email: "", senha: "" });
+
+  const { fazerLogin, carregando, erro, limparErro } = useAuthStore();
 
   function handleLogar() {
     const novosErros = {
@@ -27,7 +32,7 @@ export default function LoginScreen() {
     const temErro = Object.values(novosErros).some((e) => e !== "");
     if (temErro) return;
 
-    // prosseguir com o login
+    fazerLogin(email, senha);
   }
 
   return (
@@ -51,6 +56,8 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>Entre com suas credenciais</Text>
 
         <View style={styles.form}>
+
+          {/* Email */}
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -60,11 +67,16 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
-              onChangeText={(v) => { setEmail(v); setErros((e) => ({ ...e, email: "" })); }}
+              onChangeText={(v) => {
+                setEmail(v);
+                setErros((e) => ({ ...e, email: "" }));
+                limparErro();
+              }}
             />
             {erros.email ? <Text style={styles.erro}>{erros.email}</Text> : null}
           </View>
 
+          {/* Senha */}
           <View style={styles.field}>
             <Text style={styles.label}>Senha</Text>
             <TextInput
@@ -73,27 +85,43 @@ export default function LoginScreen() {
               placeholderTextColor="#BDBDBD"
               secureTextEntry
               value={senha}
-              onChangeText={(v) => { setSenha(v); setErros((e) => ({ ...e, senha: "" })); }}
+              onChangeText={(v) => {
+                setSenha(v);
+                setErros((e) => ({ ...e, senha: "" }));
+                limparErro();
+              }}
             />
             {erros.senha ? <Text style={styles.erro}>{erros.senha}</Text> : null}
           </View>
 
+          {/* Erro da API */}
+          {erro && (
+            <View style={styles.erroContainer}>
+              <Text style={styles.erroApi}>⚠️ {erro}</Text>
+            </View>
+          )}
+
+          {/* Botão Logar */}
           <Pressable
             style={({ pressed }) => [styles.btnLogar, pressed && styles.pressed]}
             onPress={handleLogar}
+            disabled={carregando}
           >
-            <Text style={styles.btnLogarText}>Logar</Text>
+            {carregando
+              ? <ActivityIndicator color="#FFF" />
+              : <Text style={styles.btnLogarText}>Logar</Text>
+            }
           </Pressable>
 
+          {/* Botão Cadastrar */}
           <Pressable
-            style={({ pressed }) => [
-              styles.btnCadastrar,
-              pressed && styles.pressed,
-            ]}
+            style={({ pressed }) => [styles.btnCadastrar, pressed && styles.pressed]}
             onPress={() => router.push("/cadastro")}
+            disabled={carregando}
           >
             <Text style={styles.btnCadastrarText}>Cadastrar</Text>
           </Pressable>
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -150,6 +178,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     color: "#1A1A1A",
+  },
+  erroContainer: {
+    backgroundColor: "#FFF0F0",
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: "#E53935",
+  },
+  erroApi: {
+    color: "#E53935",
+    fontSize: 13,
+    fontWeight: "500",
   },
   btnLogar: {
     backgroundColor: "#1A1A2E",
