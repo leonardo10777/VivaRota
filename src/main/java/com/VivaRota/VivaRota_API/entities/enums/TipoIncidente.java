@@ -1,10 +1,10 @@
 package com.VivaRota.VivaRota_API.entities.enums;
 
 public enum TipoIncidente {
-    Assalto,
-    semiluminacao,
-    áreaisolada,
-    assédio,
-    acidente,
-    outros
+    ASSALTO,
+    ASSEDIO,
+    SEM_ILUMINACAO,
+    AREA_ISOLADA,
+    ACIDENTE,
+    OUTROS
 }

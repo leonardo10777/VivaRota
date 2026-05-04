@@ -9,19 +9,26 @@ import java.util.UUID;
 
 public interface IncidenteRepository extends JpaRepository<Incidente, UUID> {
 
-    // 1. Busca incidentes próximos para o Mapa/Geofencing
-    // Removidos os filtros de 'status' e 'expira_em' que não existem mais
     @Query(value = "SELECT * FROM incidentes i " +
-            "WHERE ST_DWithin(i.localizacao, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326), :raio)",
+            "WHERE ST_DWithin(i.localizacao, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :raio) " +
+            "AND i.expira_em > NOW()",
             nativeQuery = true)
-    List<Incidente> buscarIncidentesProximos(@Param("lat") Double lat, @Param("lng") Double lng, @Param("raio") Double raio);
-
+    List<Incidente> buscarIncidentesProximos(
+            @Param("lat") Double lat,
+            @Param("lng") Double lng,
+            @Param("raio") Double raio);
 
     @Query(value = "SELECT COUNT(*) FROM incidentes i " +
             "WHERE ST_DWithin(i.localizacao, ST_GeogFromText(:rotaWkt), :metros)",
             nativeQuery = true)
-    Long contarIncidentesNoCaminho(@Param("rotaWkt") String rotaWkt, @Param("metros") Double metros);
-
+    Long contarIncidentesNoCaminho(
+            @Param("rotaWkt") String rotaWkt,
+            @Param("metros") Double metros);
 
     List<Incidente> findByUsuarioEmail(String email);
+
+    @Query(value = "SELECT * FROM incidentes i WHERE i.expira_em > NOW()",
+            nativeQuery = true)
+    List<Incidente> listarAtivos();
+
 }

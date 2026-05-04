@@ -41,6 +41,9 @@ public class IncidenteService {
 
         return incidenteRepository.save(incidente);
     }
+    public List<Incidente> listarTodos() {
+        return incidenteRepository.listarAtivos();
+    }
 
     // Buscar por ID
     public Incidente buscarPorId(UUID id) {
@@ -53,7 +56,8 @@ public class IncidenteService {
         return incidenteRepository.findByUsuarioEmail(emailUsuario);
     }
 
-    // Buscar próximos (Mapa / PostGIS)
+
+
     public List<Incidente> buscarProximos(Double lat, Double lng, Double raioMetros) {
         return incidenteRepository.buscarIncidentesProximos(lat, lng, raioMetros);
     }

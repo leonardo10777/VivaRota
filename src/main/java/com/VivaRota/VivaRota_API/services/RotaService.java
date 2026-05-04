@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import java.util.Locale;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,7 +39,8 @@ public class RotaService {
 
         // 1. Busca rotas alternativas na Mapbox Directions API
         String url = String.format(
-                "https://api.mapbox.com/directions/v5/mapbox/driving/" +
+                Locale.US,
+                "https://api.mapbox.com/directions/v5/mapbox/walking/" +
                         "%f,%f;%f,%f" +
                         "?geometries=geojson&alternatives=true&steps=false&access_token=%s",
                 dto.getOrigemLng(), dto.getOrigemLat(),

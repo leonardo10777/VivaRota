@@ -1,9 +1,11 @@
 package com.VivaRota.VivaRota_API.services;
 
+import com.VivaRota.VivaRota_API.DTO.LocalizacaoDTO;
 import com.VivaRota.VivaRota_API.DTO.UsuarioCadastroDTO;
 import com.VivaRota.VivaRota_API.DTO.UsuarioUpdateDTO;
 import com.VivaRota.VivaRota_API.entities.Usuario;
 import com.VivaRota.VivaRota_API.repository.UsuarioRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,6 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,6 +24,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class UsuarioService implements UserDetailsService { // ← adicionar
 
@@ -29,7 +34,7 @@ public class UsuarioService implements UserDetailsService { // ← adicionar
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // ← adicionar esse método obrigatório do UserDetailsService
+
     @Override
     public UserDetails loadUserByUsername(String email)
             throws UsernameNotFoundException {
@@ -49,9 +54,11 @@ public class UsuarioService implements UserDetailsService { // ← adicionar
     }
 
     public Usuario cadastrarUsuario(UsuarioCadastroDTO dto, MultipartFile imagem) {
+        log.info("📝 [USUARIO] Iniciando cadastro para: {}", dto.getEmail());
+
         if (usuarioRepository.findByEmail(dto.getEmail()).isPresent()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "E-mail já cadastrado.");
+            log.warn("⚠️ [USUARIO] E-mail já cadastrado: {}", dto.getEmail());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "E-mail já cadastrado.");
         }
 
         Usuario usuario = new Usuario();
@@ -62,10 +69,15 @@ public class UsuarioService implements UserDetailsService { // ← adicionar
         usuario.setSenha(passwordEncoder.encode(dto.getSenha()));
 
         if (imagem != null && !imagem.isEmpty()) {
+            log.info("🖼️ [USUARIO] Salvando imagem para: {}", dto.getEmail());
             salvarImagem(usuario, imagem);
         }
 
-        return usuarioRepository.save(usuario);
+        Usuario salvo = usuarioRepository.save(usuario);
+        log.info("✅ [USUARIO] Cadastro concluído — id: {} | email: {}",
+                salvo.getId(), salvo.getEmail());
+
+        return salvo;
     }
 
     public Usuario atualizar(Integer id, UsuarioUpdateDTO dto, MultipartFile imagem) {
@@ -107,5 +119,15 @@ public class UsuarioService implements UserDetailsService { // ← adicionar
         } catch (Exception e) {
             throw new RuntimeException("Erro ao salvar imagem.");
         }
+    }
+
+    public void atualizarLocalizacao(String email, LocalizacaoDTO dto) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Usuário não encontrado."));
+
+        usuario.setLatitude(dto.getLatitude());
+        usuario.setLongitude(dto.getLongitude());
+        usuarioRepository.save(usuario);
     }
 }

@@ -1,5 +1,6 @@
 package com.VivaRota.VivaRota_API.controller;
 
+import com.VivaRota.VivaRota_API.DTO.LocalizacaoDTO;
 import com.VivaRota.VivaRota_API.DTO.UsuarioCadastroDTO;
 import com.VivaRota.VivaRota_API.DTO.UsuarioResponseDTO;
 import com.VivaRota.VivaRota_API.DTO.UsuarioUpdateDTO;
@@ -9,6 +10,8 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -68,6 +71,14 @@ public class UsuarioController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Integer id) {
         usuarioService.deletar(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/localizacao")
+    public ResponseEntity<Void> atualizarLocalizacao(
+            @RequestBody LocalizacaoDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        usuarioService.atualizarLocalizacao(userDetails.getUsername(), dto);
         return ResponseEntity.noContent().build();
     }
 }

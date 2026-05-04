@@ -21,6 +21,16 @@ public class IncidenteController {
     @Autowired
     private IncidenteService incidenteService;
 
+    // IncidenteController.java — adicione esse método
+    @GetMapping
+    public ResponseEntity<List<IncidenteResponseDTO>> listarTodos() {
+        var lista = incidenteService.listarTodos()
+                .stream()
+                .map(IncidenteResponseDTO::new)
+                .toList();
+        return ResponseEntity.ok(lista);
+    }
+
     // GET /incidentes/meus - Lista incidentes do usuário logado
     @GetMapping("/meusIncidentes")
     public ResponseEntity<List<IncidenteResponseDTO>> listarMeusIncidentes(

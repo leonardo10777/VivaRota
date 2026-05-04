@@ -5,7 +5,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.awt.*;
+import org.locationtech.jts.geom.Point;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
@@ -36,7 +36,14 @@ public class Usuario implements UserDetails {
 
     private String imagem;
 
-    // Métodos do UserDetails para o Spring Security
+    // ← campos para receber do GPS
+    private Double latitude;
+    private Double longitude;
+
+    @Column(columnDefinition = "geography(Point, 4326)",
+            insertable = false, updatable = false)
+    private Point localizacao;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_USER"));
@@ -48,8 +55,7 @@ public class Usuario implements UserDetails {
     @Override
     public String getUsername() { return email; }
 
-    // Adicione este campo dentro da classe
-    private Point localizacao;
+
 
     // Getters e Setters
     public Integer getId() { return id; }
@@ -70,6 +76,13 @@ public class Usuario implements UserDetails {
     public void setReputacao(BigDecimal reputacao) { this.reputacao = reputacao; }
     public String getImagem() { return imagem; }
     public void setImagem(String imagem) { this.imagem = imagem; }
+
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public Point getLocalizacao() { return localizacao; }
 
     @Override
     public String toString() {

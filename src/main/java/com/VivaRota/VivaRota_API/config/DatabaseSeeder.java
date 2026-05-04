@@ -34,7 +34,7 @@ public class DatabaseSeeder {
             // 2. Criar Incidentes Mock se a tabela estiver vazia
             if (incidenteRepo.count() == 0) {
                 Incidente i1 = new Incidente();
-                i1.setTipo(TipoIncidente.Assalto);
+                i1.setTipo(TipoIncidente.ASSALTO);
                 i1.setDescricao("Buraco enorme na faixa central");
                 i1.setLatitude(-23.5505); // Centro SP
                 i1.setLongitude(-46.6333);
@@ -43,7 +43,7 @@ public class DatabaseSeeder {
                 i1.setConfirmacoes(3);
 
                 Incidente i2 = new Incidente();
-                i2.setTipo(TipoIncidente.semiluminacao);
+                i2.setTipo(TipoIncidente.SEM_ILUMINACAO);
                 i2.setDescricao("Blitz policial rotineira");
                 i2.setLatitude(-23.5591); // Av Paulista
                 i2.setLongitude(-46.6588);
