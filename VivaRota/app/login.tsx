@@ -1,4 +1,7 @@
+import { router } from "expo-router";
+import { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -9,25 +12,41 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useState } from "react";
-import { router } from "expo-router";
+import { login } from "../services/auth";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erros, setErros] = useState({ email: "", senha: "" });
+  const [carregando, setCarregando] = useState(false);
+  const [erroGeral, setErroGeral] = useState("");
 
-  function handleLogar() {
+  async function handleLogar() {
+    setErroGeral("");
+
     const novosErros = {
       email: email.trim() === "" ? "Informe o e-mail" : "",
       senha: senha.trim() === "" ? "Informe a senha" : "",
     };
     setErros(novosErros);
+    if (Object.values(novosErros).some((e) => e !== "")) return;
 
-    const temErro = Object.values(novosErros).some((e) => e !== "");
-    if (temErro) return;
-
-    // prosseguir com o login
+    setCarregando(true);
+    try {
+      await login({ email: email.trim(), senha });
+      router.replace("/boasvindas");
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401 || status === 403) {
+        setErroGeral("E-mail ou senha incorretos.");
+      } else if (status === 400) {
+        setErroGeral("Dados inválidos. Verifique o e-mail e tente novamente.");
+      } else {
+        setErroGeral("Erro de conexão. Verifique sua rede e tente novamente.");
+      }
+    } finally {
+      setCarregando(false);
+    }
   }
 
   return (
@@ -51,6 +70,12 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>Entre com suas credenciais</Text>
 
         <View style={styles.form}>
+          {erroGeral ? (
+            <View style={styles.erroGeralBox}>
+              <Text style={styles.erroGeralText}>{erroGeral}</Text>
+            </View>
+          ) : null}
+
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -60,7 +85,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
-              onChangeText={(v) => { setEmail(v); setErros((e) => ({ ...e, email: "" })); }}
+              onChangeText={(v) => { setEmail(v); setErros((e) => ({ ...e, email: "" })); setErroGeral(""); }}
             />
             {erros.email ? <Text style={styles.erro}>{erros.email}</Text> : null}
           </View>
@@ -73,24 +98,26 @@ export default function LoginScreen() {
               placeholderTextColor="#BDBDBD"
               secureTextEntry
               value={senha}
-              onChangeText={(v) => { setSenha(v); setErros((e) => ({ ...e, senha: "" })); }}
+              onChangeText={(v) => { setSenha(v); setErros((e) => ({ ...e, senha: "" })); setErroGeral(""); }}
             />
             {erros.senha ? <Text style={styles.erro}>{erros.senha}</Text> : null}
           </View>
 
           <Pressable
-            style={({ pressed }) => [styles.btnLogar, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.btnLogar, pressed && styles.pressed, carregando && styles.btnDesabilitado]}
             onPress={handleLogar}
+            disabled={carregando}
           >
-            <Text style={styles.btnLogarText}>Logar</Text>
+            {carregando
+              ? <ActivityIndicator color="#FFF" />
+              : <Text style={styles.btnLogarText}>Logar</Text>
+            }
           </Pressable>
 
           <Pressable
-            style={({ pressed }) => [
-              styles.btnCadastrar,
-              pressed && styles.pressed,
-            ]}
+            style={({ pressed }) => [styles.btnCadastrar, pressed && styles.pressed]}
             onPress={() => router.push("/cadastro")}
+            disabled={carregando}
           >
             <Text style={styles.btnCadastrarText}>Cadastrar</Text>
           </Pressable>
@@ -101,88 +128,24 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 32,
-    paddingTop: 72,
-    paddingBottom: 40,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  logo: {
-    width: 180,
-    height: 180,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: "400",
-    color: "#1A1A1A",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#9E9E9E",
-    textAlign: "center",
-    marginBottom: 40,
-  },
-  form: {
-    gap: 16,
-  },
-  field: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1A1A1A",
-  },
-  input: {
-    backgroundColor: "#F5F5F5",
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: "#1A1A1A",
-  },
-  btnLogar: {
-    backgroundColor: "#1A1A2E",
-    borderRadius: 10,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  btnLogarText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  btnCadastrar: {
-    backgroundColor: "#EEEEEE",
-    borderRadius: 10,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  btnCadastrarText: {
-    color: "#1A1A1A",
-    fontSize: 16,
-    fontWeight: "400",
-  },
-  inputErro: {
-    borderWidth: 1,
-    borderColor: "#E53935",
-  },
-  erro: {
-    fontSize: 12,
-    color: "#E53935",
-  },
-  pressed: {
-    opacity: 0.75,
-  },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  scroll: { flexGrow: 1, paddingHorizontal: 32, paddingTop: 72, paddingBottom: 40 },
+  logoContainer: { alignItems: "center", marginBottom: 32 },
+  logo: { width: 180, height: 180 },
+  title: { fontSize: 36, fontWeight: "400", color: "#1A1A1A", textAlign: "center", marginBottom: 8 },
+  subtitle: { fontSize: 14, color: "#9E9E9E", textAlign: "center", marginBottom: 40 },
+  form: { gap: 16 },
+  field: { gap: 6 },
+  label: { fontSize: 14, fontWeight: "500", color: "#1A1A1A" },
+  input: { backgroundColor: "#F5F5F5", borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#1A1A1A" },
+  inputErro: { borderWidth: 1, borderColor: "#E53935" },
+  erro: { fontSize: 12, color: "#E53935" },
+  erroGeralBox: { backgroundColor: "#FFEBEE", borderRadius: 8, padding: 12 },
+  erroGeralText: { color: "#C62828", fontSize: 14, textAlign: "center" },
+  btnLogar: { backgroundColor: "#1A1A2E", borderRadius: 10, paddingVertical: 16, alignItems: "center", marginTop: 8 },
+  btnLogarText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  btnCadastrar: { backgroundColor: "#EEEEEE", borderRadius: 10, paddingVertical: 16, alignItems: "center" },
+  btnCadastrarText: { color: "#1A1A1A", fontSize: 16, fontWeight: "400" },
+  btnDesabilitado: { opacity: 0.7 },
+  pressed: { opacity: 0.75 },
 });
