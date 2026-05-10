@@ -15,7 +15,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class IncidenteRequestDTO {
 
-    @NotNull(message = "O ID do usuário é obrigatório.")
     private UUID usuarioId;
 
     @NotNull(message = "O tipo do incidente é obrigatório.")
