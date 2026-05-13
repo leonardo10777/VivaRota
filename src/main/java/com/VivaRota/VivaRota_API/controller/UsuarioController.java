@@ -26,6 +26,12 @@ public class UsuarioController {
     @Autowired
     private UsuarioService usuarioService;
 
+    @GetMapping("/me")
+    public ResponseEntity<UsuarioResponseDTO> me(@AuthenticationPrincipal UserDetails userDetails) {
+        Usuario usuario = (Usuario) usuarioService.loadUserByUsername(userDetails.getUsername());
+        return ResponseEntity.ok(new UsuarioResponseDTO(usuario));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<UsuarioResponseDTO> findById(@PathVariable Integer id) {
         return ResponseEntity.ok(new UsuarioResponseDTO(usuarioService.findById(id)));

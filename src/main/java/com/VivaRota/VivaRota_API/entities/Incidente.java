@@ -48,6 +48,9 @@ public class Incidente {
     @Column(name = "criado_em", updatable = false)
     private LocalDateTime criadoEm;
 
+    @Column(name = "expira_em")
+    private LocalDateTime expiraEm;
+
     @Override
     public String toString() {
         return "Incidente{" +

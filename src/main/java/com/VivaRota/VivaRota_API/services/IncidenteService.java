@@ -34,6 +34,7 @@ public class IncidenteService {
         incidente.setLatitude(dto.getLatitude());
         incidente.setLongitude(dto.getLongitude());
         incidente.setEndereco(dto.getEndereco());
+        incidente.setExpiraEm(java.time.LocalDateTime.now().plusHours(24));
 
         // Gamificação: Incrementa o histórico do usuário
         usuario.setTotalReports(usuario.getTotalReports() + 1);
@@ -82,6 +83,7 @@ public class IncidenteService {
         incidente.setLatitude(dto.getLatitude());
         incidente.setLongitude(dto.getLongitude());
         incidente.setEndereco(dto.getEndereco());
+        incidente.setExpiraEm(java.time.LocalDateTime.now().plusHours(24));
 
         return incidenteRepository.save(incidente);
     }
