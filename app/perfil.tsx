@@ -1,7 +1,6 @@
 import { api } from '@/services/api';
-import { limparSessao, recuperarSessao } from '@/services/auth';
+import { useAuthStore } from '@/services/authStore';
 import { router } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -43,8 +42,10 @@ export default function PerfilScreen() {
     }
   };
 
+  const { fazerLogout } = useAuthStore();
+
   const handleLogout = async () => {
-    await limparSessao();
+    await fazerLogout();
     router.replace('/login');
   };
 

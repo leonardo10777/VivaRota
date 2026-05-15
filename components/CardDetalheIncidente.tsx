@@ -1,5 +1,5 @@
 import { Incidente } from '@/services/alertas';
-import api from '@/services/api';
+import { api } from '@/services/api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
