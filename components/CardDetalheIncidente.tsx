@@ -81,7 +81,7 @@ export function CardDetalheIncidente({ incidente, onFechar }: Props) {
         activeOpacity={1}
         onPress={onFechar}
       >
-        <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+        <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: "100%" }}>
           <View style={styles.container}>
             {/* Header colorido */}
             <View style={[styles.header, { backgroundColor: config.cor }]}>
