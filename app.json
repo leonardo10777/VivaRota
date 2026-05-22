@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vivarota.app"
+      "bundleIdentifier": "com.vivarota.app",
+      "infoPlist": {
+        "NSSendSMSPermissionUsageDescription": "Necessário para enviar alertas de emergência aos seus contatos de confiança"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +31,8 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SEND_SMS"
       ]
     },
     "plugins": [

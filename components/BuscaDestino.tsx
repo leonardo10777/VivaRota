@@ -18,6 +18,8 @@ import {
 interface Props {
   onBuscarTexto: (endereco: string) => void;
   onBuscarCoordenadas: (coords: [number, number]) => void;
+  onDefinirOrigemTexto: (endereco: string) => void;
+  onDefinirOrigemCoordenadas: (coords: [number, number]) => void;
   onLimpar: () => void;
   onAbrirMenu: () => void;
   carregando: boolean;
@@ -25,11 +27,16 @@ interface Props {
   duracao?: string;
   erro?: string | null;
   localizacaoUsuario?: [number, number];
+  origemCustom?: [number, number] | null;
 }
+
+type CampoAtivo = 'origem' | 'destino' | null;
 
 export function BuscaDestino({
   onBuscarTexto,
   onBuscarCoordenadas,
+  onDefinirOrigemTexto,
+  onDefinirOrigemCoordenadas,
   onLimpar,
   onAbrirMenu,
   carregando,
@@ -37,27 +44,32 @@ export function BuscaDestino({
   duracao,
   erro,
   localizacaoUsuario,
+  origemCustom,
 }: Props) {
-  const [texto, setTexto] = useState("");
+  const [textoDestino, setTextoDestino] = useState("");
+  const [textoOrigem, setTextoOrigem] = useState("");
   const [sugestoes, setSugestoes] = useState<Sugestao[]>([]);
   const [buscandoSugestoes, setBuscandoSugestoes] = useState(false);
-  const sessionToken = useRef(gerarSessionToken());
+  const [campoAtivo, setCampoAtivo] = useState<CampoAtivo>(null);
+  const [mostrarOrigem, setMostrarOrigem] = useState(false);
+  const [destinoSelecionado, setDestinoSelecionado] = useState(false);
+  const [origemSelecionada, setOrigemSelecionada] = useState(false);
+
+  const sessionTokenDestino = useRef(gerarSessionToken());
+  const sessionTokenOrigem = useRef(gerarSessionToken());
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const selecionandoRef = useRef(false); // ← controla se está selecionando
+  const selecionandoRef = useRef(false);
+  const inputOrigemRef = useRef<TextInput>(null);
+  const inputDestinoRef = useRef<TextInput>(null);
 
   useEffect(() => {
-    // Não rebusca se estiver selecionando uma sugestão
     if (selecionandoRef.current) return;
+    if (destinoSelecionado && campoAtivo === 'destino') return;
+    if (origemSelecionada && campoAtivo === 'origem') return;
 
-    if (texto.trim().length < 3) {
-      setSugestoes([]);
-      return;
-    }
+    const textoAtual = campoAtivo === 'origem' ? textoOrigem : textoDestino;
 
-    // Não busca se terminar com número muito alto
-    const ultimaPalavra = texto.trim().split(" ").pop() ?? "";
-    const numero = parseInt(ultimaPalavra);
-    if (!isNaN(numero) && numero > 9999) {
+    if (textoAtual.trim().length < 3) {
       setSugestoes([]);
       return;
     }
@@ -66,22 +78,21 @@ export function BuscaDestino({
     debounceRef.current = setTimeout(async () => {
       setBuscandoSugestoes(true);
       try {
+        const token = campoAtivo === 'origem'
+          ? sessionTokenOrigem.current
+          : sessionTokenDestino.current;
+
         const resultados = await buscarSugestoes(
-          texto,
+          textoAtual,
           localizacaoUsuario,
-          sessionToken.current,
+          token,
         );
 
-        const filtrados = resultados.filter((s) => {
+        setSugestoes(resultados.filter((s) => {
           const enderecoCompleto = `${s.nome} ${s.endereco}`.toLowerCase();
           const numerosNoEndereco = enderecoCompleto.match(/\d+/g) ?? [];
-          const temNumeroInvalido = numerosNoEndereco.some(
-            (n) => parseInt(n) > 9999,
-          );
-          return !temNumeroInvalido;
-        });
-
-        setSugestoes(filtrados);
+          return !numerosNoEndereco.some((n) => parseInt(n) > 9999);
+        }));
       } catch (e) {
         console.log("❌ [AUTOCOMPLETE] Erro:", e);
       } finally {
@@ -90,66 +101,164 @@ export function BuscaDestino({
     }, 400);
 
     return () => clearTimeout(debounceRef.current);
-  }, [texto]);
+  }, [textoDestino, textoOrigem, campoAtivo, destinoSelecionado, origemSelecionada]);
 
   async function handleSelecionarSugestao(sugestao: Sugestao) {
-    selecionandoRef.current = true; // ← bloqueia o useEffect
-    setTexto(sugestao.nome);
+    selecionandoRef.current = true;
     setSugestoes([]);
 
     try {
-      const coords = await recuperarCoordenadas(
-        sugestao.mapboxId,
-        sessionToken.current,
-      );
+      const token = campoAtivo === 'origem'
+        ? sessionTokenOrigem.current
+        : sessionTokenDestino.current;
+
+      const coords = await recuperarCoordenadas(sugestao.mapboxId, token);
       if (!coords) return;
-      sessionToken.current = gerarSessionToken();
-      onBuscarCoordenadas(coords);
+
+      if (campoAtivo === 'origem') {
+        setTextoOrigem(sugestao.nome);
+        setOrigemSelecionada(true);
+        setCampoAtivo(null);
+        sessionTokenOrigem.current = gerarSessionToken();
+        onDefinirOrigemCoordenadas(coords);
+        // Move câmera para a origem selecionada
+        setTimeout(() => inputDestinoRef.current?.focus(), 100);
+      } else {
+        setTextoDestino(sugestao.nome);
+        setDestinoSelecionado(true);
+        setCampoAtivo(null);
+        sessionTokenDestino.current = gerarSessionToken();
+        onBuscarCoordenadas(coords);
+      }
     } catch (e) {
       console.log("❌ [AUTOCOMPLETE] Erro ao recuperar coordenadas:", e);
     } finally {
-      selecionandoRef.current = false; // ← libera após concluir
+      selecionandoRef.current = false;
+    }
+  }
+
+  function handleUsarLocalizacaoAtual() {
+    setTextoOrigem("Minha localização atual");
+    setOrigemSelecionada(true);
+    setSugestoes([]);
+    setCampoAtivo(null);
+    if (localizacaoUsuario) {
+      onDefinirOrigemCoordenadas(localizacaoUsuario);
     }
   }
 
   function handleBuscarTexto() {
-    if (texto.trim()) {
+    if (textoDestino.trim()) {
       setSugestoes([]);
-      onBuscarTexto(texto);
+      setDestinoSelecionado(true);
+      onBuscarTexto(textoDestino);
     }
   }
 
   function handleLimpar() {
-    setTexto("");
+    setTextoDestino("");
+    setTextoOrigem("");
     setSugestoes([]);
-    sessionToken.current = gerarSessionToken();
+    setCampoAtivo(null);
+    setMostrarOrigem(false);
+    setDestinoSelecionado(false);
+    setOrigemSelecionada(false);
+    sessionTokenDestino.current = gerarSessionToken();
+    sessionTokenOrigem.current = gerarSessionToken();
     onLimpar();
   }
 
+  function handleChangeDestino(texto: string) {
+    setTextoDestino(texto);
+    setDestinoSelecionado(false);
+  }
+
+  function handleChangeOrigem(texto: string) {
+    setTextoOrigem(texto);
+    setOrigemSelecionada(false);
+  }
+
+  // Mostra lista de sugestões + opção localização atual
+  const mostrarLista = (sugestoes.length > 0 || campoAtivo === 'origem') &&
+    !destinoSelecionado &&
+    !(campoAtivo === 'destino' && destinoSelecionado);
+
   return (
     <View style={styles.container}>
-      <View style={styles.inputRow}>
-        <TouchableOpacity style={styles.btnMenu} onPress={onAbrirMenu}>
-          <View style={styles.hamburguer}>
-            <View style={styles.linha} />
-            <View style={styles.linha} />
-            <View style={styles.linha} />
+
+      {/* Campo origem */}
+      {mostrarOrigem && (
+        <View style={styles.inputRow}>
+          <View style={styles.iconContainer}>
+            <Text style={styles.iconTexto}>🔵</Text>
           </View>
+
+          <TextInput
+            ref={inputOrigemRef}
+            style={styles.input}
+            placeholder="De onde você vai sair?"
+            placeholderTextColor="#999"
+            value={textoOrigem}
+            onChangeText={handleChangeOrigem}
+            onFocus={() => {
+              setCampoAtivo('origem');
+              setOrigemSelecionada(false);
+              // Limpa "Minha localização atual" ao focar para digitar
+              if (textoOrigem === "Minha localização atual") {
+                setTextoOrigem("");
+              }
+            }}
+            returnKeyType="search"
+          />
+
+          {textoOrigem.length > 0 && (
+            <TouchableOpacity
+              style={styles.btn}
+              onPress={() => {
+                setTextoOrigem("");
+                setOrigemSelecionada(false);
+                setSugestoes([]);
+              }}
+            >
+              <Text style={styles.btnText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Campo destino */}
+      <View style={[styles.inputRow, mostrarOrigem && styles.inputRowDestino]}>
+        <TouchableOpacity style={styles.btnMenu} onPress={onAbrirMenu}>
+          {mostrarOrigem ? (
+            <Text style={{ fontSize: 16 }}>📍</Text>
+          ) : (
+            <View style={styles.hamburguer}>
+              <View style={styles.linha} />
+              <View style={styles.linha} />
+              <View style={styles.linha} />
+            </View>
+          )}
         </TouchableOpacity>
 
         <TextInput
+          ref={inputDestinoRef}
           style={styles.input}
           placeholder="Para onde?"
           placeholderTextColor="#999"
-          value={texto}
-          onChangeText={setTexto}
+          value={textoDestino}
+          onChangeText={handleChangeDestino}
+          onFocus={() => {
+            setCampoAtivo('destino');
+            setMostrarOrigem(true);
+            setDestinoSelecionado(false);
+          }}
           onSubmitEditing={handleBuscarTexto}
           returnKeyType="search"
         />
 
         {buscandoSugestoes || carregando ? (
           <ActivityIndicator style={styles.btn} color="#4a9ff0" size="small" />
-        ) : texto.length > 0 ? (
+        ) : textoDestino.length > 0 ? (
           <TouchableOpacity style={styles.btn} onPress={handleLimpar}>
             <Text style={styles.btnText}>✕</Text>
           </TouchableOpacity>
@@ -161,35 +270,56 @@ export function BuscaDestino({
       </View>
 
       {/* Lista de sugestões */}
-      {sugestoes.length > 0 && (
+      {mostrarLista && (
         <View style={styles.listaSugestoes}>
-          <FlatList
-            data={sugestoes}
-            keyExtractor={(item) => item.mapboxId}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item, index }) => (
-              <TouchableOpacity
-                style={[
-                  styles.sugestaoItem,
-                  index < sugestoes.length - 1 && styles.sugestaoItemBorder,
-                ]}
-                onPress={() => handleSelecionarSugestao(item)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.sugestaoIcone}>📍</Text>
-                <View style={styles.sugestaoTextos}>
-                  <Text style={styles.sugestaoNome} numberOfLines={1}>
-                    {item.nome}
-                  </Text>
-                  {item.endereco ? (
-                    <Text style={styles.sugestaoEndereco} numberOfLines={1}>
-                      {item.endereco}
+          {/* Opção localização atual — sempre no topo quando campo origem ativo */}
+          {campoAtivo === 'origem' && (
+            <TouchableOpacity
+              style={[styles.sugestaoItem, sugestoes.length > 0 && styles.sugestaoItemBorder]}
+              onPress={handleUsarLocalizacaoAtual}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.sugestaoIcone}>📍</Text>
+              <View style={styles.sugestaoTextos}>
+                <Text style={[styles.sugestaoNome, { color: '#4a9ff0' }]}>
+                  Minha localização atual
+                </Text>
+                <Text style={styles.sugestaoEndereco}>
+                  Usar minha posição GPS
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {sugestoes.length > 0 && (
+            <FlatList
+              data={sugestoes}
+              keyExtractor={(item) => item.mapboxId}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item, index }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.sugestaoItem,
+                    index < sugestoes.length - 1 && styles.sugestaoItemBorder,
+                  ]}
+                  onPress={() => handleSelecionarSugestao(item)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.sugestaoIcone}>📍</Text>
+                  <View style={styles.sugestaoTextos}>
+                    <Text style={styles.sugestaoNome} numberOfLines={1}>
+                      {item.nome}
                     </Text>
-                  ) : null}
-                </View>
-              </TouchableOpacity>
-            )}
-          />
+                    {item.endereco ? (
+                      <Text style={styles.sugestaoEndereco} numberOfLines={1}>
+                        {item.endereco}
+                      </Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          )}
         </View>
       )}
 
@@ -228,15 +358,35 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     alignItems: "center",
+    marginBottom: 4,
+  },
+  inputRowDestino: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+    marginBottom: 0,
+    marginTop: 0,
   },
   btnMenu: {
     padding: 14,
     justifyContent: "center",
     alignItems: "center",
   },
+  iconContainer: {
+    padding: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconTexto: { fontSize: 14 },
   hamburguer: { gap: 4, alignItems: "center" },
   linha: { width: 18, height: 2, backgroundColor: "#333", borderRadius: 2 },
-  input: { flex: 1, paddingVertical: 14, fontSize: 15, color: "#333" },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: "#333",
+  },
   btn: {
     padding: 14,
     justifyContent: "center",
@@ -253,7 +403,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
-    maxHeight: 280,
+    maxHeight: 300,
     overflow: "hidden",
   },
   sugestaoItem: {

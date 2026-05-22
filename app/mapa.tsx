@@ -25,6 +25,7 @@ export default function MapScreen() {
 
   const {
     destino,
+    origemCustom,
     rotas,
     rotaAtiva,
     rotaSelecionada,
@@ -35,6 +36,8 @@ export default function MapScreen() {
     duracao,
     buscarRota,
     buscarRotaPorCoordenadas,
+    definirOrigemCustom,
+    definirOrigemPorCoordenadas,
     limparRota,
   } = useRota();
 
@@ -54,9 +57,21 @@ export default function MapScreen() {
 
   useEffect(() => {
     if (rotaAtiva && destino && location) {
-      cameraRef.current?.fitBounds(destino, location, [80, 80, 200, 80], 1000);
+      const origem = origemCustom ?? location;
+      cameraRef.current?.fitBounds(destino, origem, [80, 80, 200, 80], 1000);
     }
   }, [rotaAtiva]);
+
+  // Move câmera quando origem custom muda
+  useEffect(() => {
+    if (origemCustom) {
+      cameraRef.current?.setCamera({
+        centerCoordinate: origemCustom,
+        zoomLevel: 15,
+        animationDuration: 500,
+      });
+    }
+  }, [origemCustom]);
 
   const voltarParaLocalizacao = () => {
     if (!location) return;
@@ -133,9 +148,9 @@ export default function MapScreen() {
 
       <BuscaDestino
         onBuscarTexto={(endereco) => buscarRota(endereco, location)}
-        onBuscarCoordenadas={(coords) =>
-          buscarRotaPorCoordenadas(coords, location)
-        }
+        onBuscarCoordenadas={(coords) => buscarRotaPorCoordenadas(coords, location)}
+        onDefinirOrigemTexto={(endereco) => definirOrigemCustom(endereco, location)}
+        onDefinirOrigemCoordenadas={definirOrigemPorCoordenadas}
         onLimpar={limparRota}
         onAbrirMenu={() => setMenuAberto(true)}
         carregando={carregando}
@@ -143,6 +158,7 @@ export default function MapScreen() {
         duracao={duracao}
         erro={erro}
         localizacaoUsuario={location}
+        origemCustom={origemCustom}
       />
 
       {rotas && (

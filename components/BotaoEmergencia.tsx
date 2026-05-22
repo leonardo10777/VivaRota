@@ -1,9 +1,12 @@
+// ═══════════════════════════════════════════════════════════════
+// 📁 components/BotaoEmergencia.tsx
+// ═══════════════════════════════════════════════════════════════
+
 import { Colors } from "@/constants/Colors";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as SecureStore from "expo-secure-store";
-import * as SMS from "expo-sms";
 import React, { useRef, useState } from "react";
 import {
   Animated,
@@ -16,16 +19,29 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAlert } from "@/contexts/AlertContext";
+
+// Importação segura do expo-sms
+let SMS: any = null;
+try {
+  SMS = require("expo-sms");
+} catch {
+  console.warn("⚠️ expo-sms não disponível");
+  SMS = null;
+}
 
 const HOLD_DURATION = 3000;
 const CHAVE = "contatos_emergencia";
 
 export function BotaoEmergencia() {
   const insets = useSafeAreaInsets();
+  const { showAlert } = useAlert();
+  
   const [isHolding, setIsHolding] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [modalVisible, setModalVisible] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [statusMensagem, setStatusMensagem] = useState<string>("");
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const rippleScale = useRef(new Animated.Value(1)).current;
@@ -104,6 +120,20 @@ export function BotaoEmergencia() {
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   };
 
+  const formatarTelefoneParaSMS = (telefone: string): string => {
+    const numeros = telefone.replace(/\D/g, "");
+    
+    if (numeros.startsWith("55")) {
+      return `+${numeros}`;
+    }
+    
+    if (numeros.length === 10 || numeros.length === 11) {
+      return `+55${numeros}`;
+    }
+    
+    return `+55${numeros.slice(-11)}`;
+  };
+
   const triggerEmergency = async () => {
     isHoldingRef.current = false;
     setIsHolding(false);
@@ -114,11 +144,23 @@ export function BotaoEmergencia() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
     setEnviando(true);
+    setStatusMensagem("Processando...");
+
+    // Mostrar alerta de emergência no topo
+    showAlert({
+      type: 'emergency',
+      title: '🆘 ALERTA DE EMERGÊNCIA',
+      message: 'Enviando sua localização para contatos...',
+      duration: 0,
+    });
+
+    console.log("🚨 [SOS] Acionamento iniciado");
 
     try {
-      // Pega localização atual
+      // 1️⃣ Pega localização atual
       let linkMapa = "Localização indisponível";
       try {
+        console.log("📍 Solicitando localização...");
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === "granted") {
           const loc = await Location.getCurrentPositionAsync({
@@ -126,44 +168,110 @@ export function BotaoEmergencia() {
           });
           const { latitude, longitude } = loc.coords;
           linkMapa = `https://maps.google.com/?q=${latitude},${longitude}`;
+          console.log("✅ Localização obtida:", { latitude, longitude });
         }
-      } catch {
-        // Continua sem localização
+      } catch (locError) {
+        console.error("❌ Erro ao obter localização:", locError);
       }
 
-      // Busca contatos salvos
+      // 2️⃣ Busca contatos salvos
+      console.log("📞 Carregando contatos de emergência...");
       const dados = await SecureStore.getItemAsync(CHAVE);
       const contatos = dados ? JSON.parse(dados) : [];
+      console.log("✅ Contatos carregados:", contatos.length);
 
       if (contatos.length === 0) {
+        console.warn("⚠️ Nenhum contato de emergência cadastrado");
+        showAlert({
+          type: 'warning',
+          title: '⚠️ Nenhum Contato',
+          message: 'Cadastre contatos de emergência nas configurações',
+          duration: 5000,
+        });
         setEnviando(false);
-        setModalVisible(true);
         return;
       }
 
-      // Verifica se SMS está disponível
-      const disponivel = await SMS.isAvailableAsync();
-      if (disponivel) {
-        const numeros = contatos.map((c: any) => c.phone.replace(/\D/g, ""));
-        const mensagem =
-          `🆘 EMERGÊNCIA! Preciso de ajuda!\n` +
-          `📍 Minha localização: ${linkMapa}\n` +
-          `Enviado pelo VivaRota`;
+      // 3️⃣ Envia SMS se disponível
+      if (!SMS) {
+        console.error("❌ expo-sms não foi carregado");
+        showAlert({
+          type: 'warning',
+          title: '⚠️ SMS Indisponível',
+          message: 'Reinstale o app com suporte a SMS',
+          duration: 5000,
+        });
+        setEnviando(false);
+        return;
+      }
 
+      console.log("📱 Verificando disponibilidade de SMS...");
+      const disponivel = await SMS.isAvailableAsync();
+
+      if (!disponivel) {
+        console.warn("⚠️ SMS não está disponível neste dispositivo");
+        showAlert({
+          type: 'warning',
+          title: '⚠️ SMS Bloqueado',
+          message: 'Ative SMS nas configurações do dispositivo',
+          duration: 5000,
+        });
+        setEnviando(false);
+        return;
+      }
+
+      // 4️⃣ Formata números para SMS
+      const numeros = contatos.map((c: any) => {
+        const formatado = formatarTelefoneParaSMS(c.phone);
+        console.log(`📱 ${c.name}: ${c.phone} → ${formatado}`);
+        return formatado;
+      });
+
+      const mensagem =
+        `🆘 EMERGÊNCIA! Preciso de ajuda!\n` +
+        `📍 Minha localização: ${linkMapa}\n` +
+        `Enviado pelo VivaRota`;
+
+      console.log("📨 Enviando SMS para:", numeros);
+
+      // 5️⃣ Envia SMS
+      try {
         await SMS.sendSMSAsync(numeros, mensagem);
+        console.log("✅ SMS enviado com sucesso");
+        
+        // Alerta de sucesso
+        showAlert({
+          type: 'success',
+          title: '✅ Emergência Acionada!',
+          message: `SMS enviado para ${contatos.length} contato(s)`,
+          duration: 6000,
+        });
+
+        setStatusMensagem(`✅ SMS enviado para ${contatos.length} contato(s)`);
+      } catch (smsError) {
+        console.error("❌ Erro ao enviar SMS:", smsError);
+        showAlert({
+          type: 'emergency',
+          title: '❌ Erro ao Enviar',
+          message: 'Tente novamente ou acione manualmente',
+          duration: 6000,
+        });
+        setStatusMensagem("❌ Erro ao enviar SMS");
       }
     } catch (error) {
-      console.log("❌ [SOS] Erro:", error);
+      console.error("❌ [SOS] Erro geral:", error);
+      showAlert({
+        type: 'emergency',
+        title: '❌ Erro no Sistema',
+        message: 'Entre em contato com suporte',
+        duration: 6000,
+      });
+      setStatusMensagem("❌ Erro ao processar SOS");
     } finally {
       setEnviando(false);
       setModalVisible(true);
     }
   };
-
-  const larguraBarra = rippleScale.interpolate({
-    inputRange: [1, 2.6],
-    outputRange: ["0%", "100%"],
-  });
 
   return (
     <>
@@ -205,7 +313,7 @@ export function BotaoEmergencia() {
         )}
       </View>
 
-      {/* Modal confirmação */}
+      {/* Modal de confirmação final */}
       <Modal
         transparent
         visible={modalVisible}
@@ -216,28 +324,24 @@ export function BotaoEmergencia() {
           <View style={styles.modalCard}>
             <View style={styles.modalIcon}>
               <MaterialCommunityIcons
-                name="alarm-light"
-                size={44}
-                color={Colors.emergency}
-              />
-            </View>
-            <Text style={styles.modalTitle}>SOS Acionado!</Text>
-            <Text style={styles.modalBody}>
-              Sua localização foi enviada para seus contatos de emergência via
-              SMS.
-            </Text>
-            <TouchableOpacity
-              style={styles.cancelModal}
-              onPress={() => setModalVisible(false)}
-            >
-              <MaterialCommunityIcons
                 name="check-circle"
-                size={18}
+                size={48}
                 color={Colors.success}
               />
-              <Text style={styles.cancelModalText}>
-                Estou bem — Cancelar alerta
-              </Text>
+            </View>
+            <Text style={styles.modalTitle}>Alerta Enviado!</Text>
+            <Text style={styles.modalBody}>
+              {statusMensagem || "Sua localização foi compartilhada com segurança."}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.confirmBtn}
+              onPress={() => {
+                setModalVisible(false);
+                setStatusMensagem("");
+              }}
+            >
+              <Text style={styles.confirmBtnText}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -325,14 +429,14 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: Colors.emergencyLight,
+    backgroundColor: Colors.successLight,
     alignItems: "center",
     justifyContent: "center",
   },
   modalTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: Colors.emergency,
+    color: Colors.success,
   },
   modalBody: {
     fontSize: 15,
@@ -340,20 +444,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
-  cancelModal: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.successLight,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 14,
+  confirmBtn: {
     width: "100%",
-    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
     marginTop: 4,
   },
-  cancelModalText: {
-    color: Colors.success,
+  confirmBtnText: {
+    color: Colors.white,
     fontWeight: "700",
     fontSize: 15,
   },

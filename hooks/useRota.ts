@@ -6,6 +6,7 @@ export type TipoRota = 'segura' | 'rapida';
 
 export function useRota() {
   const [destino, setDestino] = useState<[number, number] | null>(null);
+  const [origemCustom, setOrigemCustom] = useState<[number, number] | null>(null);
   const [rotas, setRotas] = useState<RotaResponse | null>(null);
   const [rotaSelecionada, setRotaSelecionada] = useState<TipoRota>('segura');
   const [carregando, setCarregando] = useState(false);
@@ -15,18 +16,22 @@ export function useRota() {
     ? rotas[`rota${rotaSelecionada.charAt(0).toUpperCase() + rotaSelecionada.slice(1)}` as keyof RotaResponse]
     : null;
 
+  // Retorna a origem a ser usada — custom ou GPS
+  const resolverOrigem = (localizacaoGPS: [number, number]): [number, number] => {
+    return origemCustom ?? localizacaoGPS;
+  };
+
   const buscarRota = async (endereco: string, origem: [number, number]) => {
     if (!endereco.trim()) return;
     setCarregando(true);
     setErro(null);
     try {
-      console.log('🔍 [ROTA] Geocodificando:', endereco);
       const coordDestino = await geocodificarEndereco(endereco);
       if (!coordDestino) {
         setErro('Endereço não encontrado.');
         return;
       }
-      await _calcularRotas(origem, coordDestino);
+      await _calcularRotas(resolverOrigem(origem), coordDestino);
     } catch (e) {
       console.log('❌ [ROTA] Erro:', e);
       setErro('Erro ao buscar rota. Tente novamente.');
@@ -42,11 +47,46 @@ export function useRota() {
     setCarregando(true);
     setErro(null);
     try {
-      await _calcularRotas(origem, coordDestino);
+      await _calcularRotas(resolverOrigem(origem), coordDestino);
     } catch (e) {
       console.log('❌ [ROTA] Erro:', e);
       setErro('Erro ao calcular rota. Tente novamente.');
     } finally {
+      setCarregando(false);
+    }
+  };
+
+  const definirOrigemCustom = async (
+    endereco: string,
+    origem: [number, number]
+  ) => {
+    if (!endereco.trim()) {
+      setOrigemCustom(null);
+      return;
+    }
+    try {
+      const coords = await geocodificarEndereco(endereco);
+      if (coords) {
+        setOrigemCustom(coords);
+        // Recalcula rotas se já tem destino
+        if (destino) {
+          setCarregando(true);
+          await _calcularRotas(coords, destino);
+          setCarregando(false);
+        }
+      }
+    } catch (e) {
+      console.log('❌ [ROTA] Erro ao definir origem:', e);
+    }
+  };
+
+  const definirOrigemPorCoordenadas = async (
+    coords: [number, number]
+  ) => {
+    setOrigemCustom(coords);
+    if (destino) {
+      setCarregando(true);
+      await _calcularRotas(coords, destino);
       setCarregando(false);
     }
   };
@@ -56,7 +96,6 @@ export function useRota() {
     coordDestino: [number, number]
   ) => {
     setDestino(coordDestino);
-    console.log('📡 [ROTA] Calculando rotas via backend...');
 
     const resultado = await calcularRotasBackend(
       origem[1], origem[0],
@@ -76,6 +115,7 @@ export function useRota() {
     setDestino(null);
     setRotas(null);
     setErro(null);
+    setOrigemCustom(null);
     setRotaSelecionada('segura');
   };
 
@@ -91,6 +131,7 @@ export function useRota() {
 
   return {
     destino,
+    origemCustom,
     rotas,
     rotaAtiva,
     rotaSelecionada,
@@ -101,6 +142,8 @@ export function useRota() {
     duracao,
     buscarRota,
     buscarRotaPorCoordenadas,
+    definirOrigemCustom,
+    definirOrigemPorCoordenadas,
     limparRota,
   };
 }

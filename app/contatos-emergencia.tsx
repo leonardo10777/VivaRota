@@ -47,45 +47,107 @@ function formatPhone(raw: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
+function validarTelefone(telefone: string): { valido: boolean; erro?: string } {
+  const numeros = telefone.replace(/\D/g, '');
+  
+  if (numeros.length !== 10 && numeros.length !== 11) {
+    return { 
+      valido: false, 
+      erro: `Telefone deve ter 10 ou 11 dígitos. Você digitou ${numeros.length}.` 
+    };
+  }
+
+  const ddd = parseInt(numeros.slice(0, 2));
+  if (ddd < 11 || ddd > 99) {
+    return { 
+      valido: false, 
+      erro: `DDD inválido (${ddd}). Use um entre 11 e 99.` 
+    };
+  }
+
+  if (numeros.length === 11 && numeros[2] !== '9') {
+    return { 
+      valido: false, 
+      erro: 'Para celular, o 9º dígito deve ser 9. Ex: (11) 99999-9999' 
+    };
+  }
+
+  return { valido: true };
+}
+
 export default function ContatosEmergencia() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  // Carrega contatos salvos ao abrir
   useEffect(() => {
     SecureStore.getItemAsync(CHAVE).then(dados => {
-      if (dados) setContacts(JSON.parse(dados));
+      if (dados) {
+        try {
+          const contatosParsed = JSON.parse(dados);
+          setContacts(contatosParsed);
+          console.log(`✅ ${contatosParsed.length} contatos de emergência carregados`);
+        } catch (error) {
+          console.error('Erro ao carregar contatos:', error);
+          Alert.alert('Erro', 'Não foi possível carregar seus contatos.');
+        }
+      }
+      setLoading(false);
     });
   }, []);
 
-  // Salva e atualiza estado
   async function salvar(lista: Contact[]) {
-    await SecureStore.setItemAsync(CHAVE, JSON.stringify(lista));
-    setContacts(lista);
+    try {
+      await SecureStore.setItemAsync(CHAVE, JSON.stringify(lista));
+      setContacts(lista);
+      console.log(`✅ ${lista.length} contatos salvos com sucesso`);
+    } catch (error) {
+      console.error('Erro ao salvar contatos:', error);
+      Alert.alert('Erro', 'Não foi possível salvar os contatos.');
+    }
   }
 
   const handleAdd = async () => {
     const n = name.trim();
     const p = phone.trim();
-    if (!n || !p) {
-      Alert.alert('Campos obrigatórios', 'Preencha o nome e o telefone.');
+
+    if (!n) {
+      Alert.alert('Campo obrigatório', 'Digite o nome do contato.');
       return;
     }
-    if (p.replace(/\D/g, '').length < 10) {
-      Alert.alert('Telefone inválido', 'Digite um número com DDD (ex: (11) 99999-9999).');
+
+    if (!p) {
+      Alert.alert('Campo obrigatório', 'Digite o número de telefone.');
       return;
     }
+
+    const validacao = validarTelefone(p);
+    if (!validacao.valido) {
+      Alert.alert('Telefone inválido', validacao.erro || 'Número de telefone inválido.');
+      return;
+    }
+
+    const jáExiste = contacts.some(c => 
+      c.phone.replace(/\D/g, '') === p.replace(/\D/g, '')
+    );
+    if (jáExiste) {
+      Alert.alert('Duplicado', 'Este número de telefone já está cadastrado.');
+      return;
+    }
+
     const novaLista = [...contacts, { id: Date.now().toString(), name: n, phone: p }];
     await salvar(novaLista);
     setName('');
     setPhone('');
     setShowForm(false);
+
+    Alert.alert('Sucesso', `${n} adicionado aos contatos de emergência.`);
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Remover contato', 'Deseja remover este contato de emergência?', [
+  const handleDelete = (id: string, nome: string) => {
+    Alert.alert('Remover contato', `Remover ${nome}?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Remover',
@@ -97,6 +159,16 @@ export default function ContatosEmergencia() {
       },
     ]);
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Carregando contatos...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -111,7 +183,6 @@ export default function ContatosEmergencia() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Info banner */}
           <View style={styles.banner}>
             <MaterialCommunityIcons name="information-outline" size={20} color={Colors.primary} />
             <Text style={styles.bannerText}>
@@ -119,7 +190,6 @@ export default function ContatosEmergencia() {
             </Text>
           </View>
 
-          {/* List header */}
           {contacts.length > 0 && (
             <View style={styles.listHeader}>
               <Text style={styles.listTitle}>Meus Contatos</Text>
@@ -127,10 +197,13 @@ export default function ContatosEmergencia() {
             </View>
           )}
 
-          {/* Contact list */}
           {contacts.length > 0 ? (
             contacts.map(c => (
-              <ContactCard key={c.id} contact={c} onDelete={() => handleDelete(c.id)} />
+              <ContactCard 
+                key={c.id} 
+                contact={c} 
+                onDelete={() => handleDelete(c.id, c.name)} 
+              />
             ))
           ) : (
             <View style={styles.empty}>
@@ -142,7 +215,6 @@ export default function ContatosEmergencia() {
             </View>
           )}
 
-          {/* Add button */}
           {contacts.length < MAX && !showForm && (
             <TouchableOpacity style={styles.addBtn} onPress={() => setShowForm(true)}>
               <MaterialCommunityIcons name="plus" size={20} color={Colors.primary} />
@@ -150,7 +222,6 @@ export default function ContatosEmergencia() {
             </TouchableOpacity>
           )}
 
-          {/* Limit reached */}
           {contacts.length >= MAX && (
             <View style={styles.limitBanner}>
               <MaterialCommunityIcons name="check-circle" size={16} color={Colors.success} />
@@ -158,7 +229,6 @@ export default function ContatosEmergencia() {
             </View>
           )}
 
-          {/* Add form */}
           {showForm && (
             <View style={styles.form}>
               <Text style={styles.formTitle}>Novo Contato</Text>
@@ -185,6 +255,10 @@ export default function ContatosEmergencia() {
                 returnKeyType="done"
               />
 
+              <Text style={styles.helperText}>
+                📱 Celular: (XX) 9XXXX-XXXX (11 dígitos) | 📞 Fixo: (XX) XXXX-XXXX (10 dígitos)
+              </Text>
+
               <View style={styles.formBtns}>
                 <TouchableOpacity
                   style={styles.cancelBtn}
@@ -206,6 +280,8 @@ export default function ContatosEmergencia() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { fontSize: 15, color: Colors.textSecondary },
   scroll: { padding: 16, paddingBottom: 40 },
   banner: {
     flexDirection: 'row',
@@ -214,7 +290,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
     padding: 14,
     borderRadius: 14,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   bannerText: { flex: 1, fontSize: 13, color: Colors.primaryDark, lineHeight: 19 },
   listHeader: {
@@ -295,6 +371,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.text,
     marginBottom: 4,
+  },
+  helperText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginBottom: 12,
+    fontStyle: 'italic',
   },
   formBtns: { flexDirection: 'row', gap: 10, marginTop: 8 },
   cancelBtn: {
