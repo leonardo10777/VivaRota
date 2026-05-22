@@ -1,46 +1,87 @@
 # 🗺️ VivaRota
 
-App mobile de rotas seguras para pedestres com alertas de incidentes em tempo real.
+Aplicativo mobile de navegação segura para pedestres. Permite reportar incidentes em tempo real (assaltos, falta de iluminação, áreas isoladas) e receber rotas que desviam dessas áreas de risco.
 
 ---
 
-## ✅ Requisitos
+## 👥 Time
 
-Instale antes de começar:
+| Membro | Responsabilidade |
+|--------|-----------------|
+| Leonardo Santana | Mapa e Rotas |
+| Kauã Diodato | Mapa e Rotas |
+| Kelvin Vargas | Login, Cadastro e Onboarding |
+| Matheus Marinho | Tela inicial e Perfil do usuário |
+| Nicolas Ferreira | Reportar incidentes, Notificações e SOS |
+
+---
+
+## 🛠️ Stack
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Frontend | React Native + Expo |
+| Mapa | Mapbox |
+| Backend | Spring Boot (Java 17) |
+| Banco | PostgreSQL 17 + PostGIS |
+| Autenticação | JWT |
+| Build | EAS (Expo Application Services) |
+
+---
+
+## 📁 Estrutura de Branches
+
+```
+main       ← Frontend completo (React Native)
+Versão1    ← Backend completo (Spring Boot)
+develop    ← Branch de desenvolvimento do frontend
+```
+
+---
+
+## ✅ Pré-requisitos
 
 - [Java JDK 17+](https://adoptium.net)
 - [Node.js 18+](https://nodejs.org)
-- [PostgreSQL 16+](https://www.postgresql.org/download)
-- [pgAdmin](https://www.pgadmin.org)
+- [PostgreSQL 17+](https://www.postgresql.org/download)
 - [Git](https://git-scm.com)
-
-Contas necessárias:
-- [Expo](https://expo.dev) — para rodar e buildar o app
-- [Mapbox](https://mapbox.com) — para mapas e rotas
+- Conta no [Expo](https://expo.dev)
+- Conta no [Mapbox](https://mapbox.com)
 
 ---
 
-## 🚀 Passo a Passo
+## 🚀 Como Rodar
 
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/SEU_USUARIO/vivarota.git
-cd vivarota
+mkdir ~/VivaRota && cd ~/VivaRota
+
+# Frontend
+git clone https://github.com/K4u4z/VivaRota.git VivaRota-App
+cd VivaRota-App && git checkout main && npm install && cd ..
+
+# Backend
+git clone https://github.com/K4u4z/VivaRota.git VivaRota
+cd VivaRota && git checkout Versão1
 ```
 
 ---
 
 ### 2. Configure o banco de dados
 
-Abra o pgAdmin, crie o banco `vivarota_db` e execute os scripts abaixo em ordem no **Query Tool**:
+Crie o banco e ative o PostGIS:
 
 ```sql
--- Extensões
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE DATABASE vivarota_db;
+\c vivarota_db
+CREATE EXTENSION postgis;
+```
 
--- Trigger de localização dos incidentes
+Suba o backend uma vez para o Hibernate criar as tabelas automaticamente, depois execute:
+
+```sql
+-- Trigger que preenche localização PostGIS automaticamente
 CREATE OR REPLACE FUNCTION preencher_localizacao()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -69,15 +110,13 @@ BEFORE INSERT OR UPDATE ON usuarios
 FOR EACH ROW EXECUTE FUNCTION preencher_localizacao_usuario();
 
 -- Pesos dos tipos de incidente
-CREATE TABLE IF NOT EXISTS tipo_incidente_peso (tipo VARCHAR(50) PRIMARY KEY, peso INTEGER NOT NULL);
-
 INSERT INTO tipo_incidente_peso VALUES
   ('ASSALTO', 3), ('ASSEDIO', 3),
   ('SEM_ILUMINACAO', 2), ('AREA_ISOLADA', 2),
   ('ACIDENTE', 1), ('OUTROS', 1)
-ON CONFLICT (tipo) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
--- Function de perigo da rota
+-- Function de score de perigo da rota
 CREATE OR REPLACE FUNCTION calcular_perigo_rota(rota_wkt TEXT, raio_metros FLOAT DEFAULT 100)
 RETURNS FLOAT AS $$
 DECLARE pontuacao FLOAT;
@@ -113,19 +152,13 @@ $$ LANGUAGE plpgsql;
 
 ### 3. Configure o backend
 
-Abra `VivaRota-API/src/main/resources/application.properties` e preencha:
+Em `src/main/resources/application.properties`:
 
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/vivarota_db
 spring.datasource.username=postgres
 spring.datasource.password=SUA_SENHA
-
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-
-api.security.token.secret=SUA_CHAVE_SECRETA_32_CARACTERES_MINIMO
-
+api.security.token.secret=SUA_CHAVE_SECRETA
 mapbox.token=pk.SEU_TOKEN_MAPBOX
 ```
 
@@ -133,99 +166,84 @@ mapbox.token=pk.SEU_TOKEN_MAPBOX
 
 ### 4. Configure o frontend
 
-Na pasta `VivaRota-App`, crie o arquivo `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Preencha o `.env`:
+Crie o arquivo `.env` na raiz de `VivaRota-App`:
 
 ```bash
 EXPO_PUBLIC_MAPBOX_TOKEN=pk.SEU_TOKEN_MAPBOX
 EXPO_PUBLIC_API_URL=http://SEU_IP:8080
 ```
 
-Para descobrir seu IP no Windows:
-
+Para descobrir seu IP:
 ```bash
+# Mac
+ipconfig getifaddr en0
+
+# Windows
 ipconfig
-# Procure: Adaptador Wi-Fi → IPv4 → 192.168.X.X
-```
-
-Instale as dependências:
-
-```bash
-cd VivaRota-App
-npm install
+# Pegar o IPv4 da rede Wi-Fi
 ```
 
 ---
 
 ### 5. Rode o projeto
 
-Abra **3 terminais**:
+> **Ordem obrigatória:** PostgreSQL → Backend → Frontend
 
-**Terminal 1 — Backend:**
+**Backend** (nova aba do terminal):
 ```bash
-cd VivaRota-API
-./mvnw spring-boot:run         # Mac/Linux
-mvnw.cmd spring-boot:run       # Windows
+# Mac
+cd ~/VivaRota/VivaRota && ./mvnw spring-boot:run
+
+# Windows
+cd %USERPROFILE%\VivaRota\VivaRota && mvnw.cmd spring-boot:run
 ```
 
-**Terminal 2 — Frontend:**
+**Frontend** (outra aba do terminal):
 ```bash
-cd VivaRota-App
-npx expo start --dev-client --host lan
+cd ~/VivaRota/VivaRota-App && npx expo start --clear
 ```
 
-**Terminal 3 — ngrok (apenas se PC e celular estiverem em redes diferentes):**
-```bash
-ngrok http 8080
-# Copie a URL gerada e coloque no .env como EXPO_PUBLIC_API_URL
-```
+Apertar `s` para modo development build e escanear o QR code com o celular Android.
 
-No celular, abra o APK instalado e escaneie o QR Code do terminal.
+> O celular precisa estar na **mesma rede Wi-Fi** que o computador.
 
 ---
 
-## 📶 Precisa do ngrok?
+## 📱 APK de Desenvolvimento
 
-| Situação | Solução |
-|---|---|
-| PC e celular no mesmo Wi-Fi | Não precisa — use o IP local |
-| PC sem placa Wi-Fi | Use ngrok ou hotspot do celular |
-| Celular em 4G e PC em Wi-Fi | Use ngrok |
+Instale o APK no celular Android:
+[Download APK](https://expo.dev/accounts/leo.work2077/projects/VivaRota-App/builds/09362ffd-e24c-4e7b-ac59-e2c27c654218)
 
-**Instalando o ngrok:**
+Para gerar um novo APK:
 ```bash
-npm install -g ngrok
-ngrok config add-authtoken SEU_TOKEN  # token em ngrok.com
-ngrok http 8080
+cd ~/VivaRota/VivaRota-App
+eas build --profile development --platform android
 ```
-
-> A URL do ngrok muda ao reiniciar. Atualize o `.env` quando isso acontecer.
 
 ---
 
-## 📦 Gerando o APK
+## ⚙️ Funcionalidades
 
-```bash
-cd VivaRota-App
-eas login
-eas build --platform android --profile development
-```
-
-O link para download aparece em [expo.dev](https://expo.dev) → seu projeto → Builds.
+- 🗺️ Mapa em tempo real com localização do usuário
+- 🔍 Busca de destino com autocomplete
+- 🛡️ Rota segura desviando de áreas de risco
+- ⚡ Rota rápida pelo caminho mais curto
+- 📍 Marcadores de incidentes por tipo e cor
+- ⚠️ Reportar incidentes com GPS automático
+- 🔔 Notificações de alertas próximos
+- 🆘 Botão SOS com contagem regressiva
+- 👤 Perfil do usuário com histórico
+- 🔐 Autenticação com JWT
 
 ---
 
-## ❗ Problemas comuns
+## ❗ Problemas Comuns
 
 | Erro | Solução |
-|---|---|
-| `failed to connect` no celular | PC e celular em redes diferentes → use ngrok |
-| `403` nas requisições | Token JWT expirou → faça logout e login novamente |
-| URL do ngrok parou de funcionar | Reiniciou o ngrok → atualize o `.env` |
-| Marcadores não aparecem no mapa | Execute `UPDATE incidentes SET latitude = latitude, longitude = longitude;` no pgAdmin |
-| Backend não sobe | Verifique se PostgreSQL está rodando e `application.properties` está preenchido |
+|------|---------|
+| `Connection refused` no celular | IP mudou — atualizar `.env` com novo IP |
+| `Network Error` no app | Backend não está rodando |
+| `403 Forbidden` | Endpoint não liberado no `SecurityConfig.java` |
+| Marcadores não aparecem | Incidentes expirados — renovar no banco |
+| `lock file already exists` (Mac) | `rm /usr/local/var/postgresql@17/postmaster.pid` |
+| Celular não acessa backend (Windows) | Liberar porta 8080 no Windows Defender Firewall |
