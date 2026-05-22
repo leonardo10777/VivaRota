@@ -31,16 +31,6 @@ public class RotaService {
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private RestTemplate restTemplate;
 
-    private static final double[][] DESVIOS = {
-            { 0.0,   0.008}, { 0.0,  -0.008},
-            { 0.0,   0.015}, { 0.0,  -0.015},
-            { 0.005, 0.008}, { 0.005,-0.008},
-            { 0.008, 0.008}, { 0.008,-0.008},
-            { 0.01,  0.015}, { 0.01, -0.015},
-            { 0.015, 0.0  }, {-0.015, 0.0  },
-            { 0.02,  0.02 }, { 0.02, -0.02 },
-    };
-
     public RotaResponseDTO calcular(RotaRequestDTO dto, String emailUsuario) {
         Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -51,14 +41,37 @@ public class RotaService {
         double destLat   = dto.getDestinoLat();
         double destLng   = dto.getDestinoLng();
 
-        // ── 1. Rota direta ──────────────────────────────────────
+        // ── 1. Rota direta ──────────────────────────────────────────────────
         RotaOpcao rotaDireta = buscarRotaMapbox(origemLat, origemLng, destLat, destLng, null);
 
-        // ── 2. Gera candidatas com waypoints em várias direções ─
+        // ── 2. Gera candidatas com waypoints proporcionais ao trajeto ────────
+        //
+        // A escala dos desvios é calculada com base no tamanho real do percurso,
+        // garantindo que os waypoints fiquem numa distância razoável da linha reta.
+        // Mínimo de 0.003° (~300m) para trajetos muito curtos.
+        double dLat = Math.abs(destLat - origemLat);
+        double dLng = Math.abs(destLng - origemLng);
+        double escala = Math.max(Math.sqrt(dLat * dLat + dLng * dLng) * 0.25, 0.003);
+
+        double[][] desvios = {
+            { 0.0,           escala       },  // leste
+            { 0.0,          -escala       },  // oeste
+            { escala,        0.0          },  // norte
+            {-escala,        0.0          },  // sul
+            { escala,        escala       },  // nordeste
+            { escala,       -escala       },  // noroeste
+            {-escala,        escala       },  // sudeste
+            {-escala,       -escala       },  // sudoeste
+            { escala * 0.5,  escala * 1.5 },
+            {-escala * 0.5,  escala * 1.5 },
+            { escala * 1.5,  escala * 0.5 },
+            {-escala * 1.5,  escala * 0.5 },
+        };
+
         List<RotaOpcao> candidatas = new ArrayList<>();
         candidatas.add(rotaDireta);
 
-        for (double[] delta : DESVIOS) {
+        for (double[] delta : desvios) {
             if (candidatas.size() >= 6) break;
             double midLat = (origemLat + destLat) / 2.0 + delta[0];
             double midLng = (origemLng + destLng) / 2.0 + delta[1];
@@ -68,17 +81,28 @@ public class RotaService {
             if (!jaExiste) candidatas.add(candidata);
         }
 
-        // ── 3. RÁPIDA → menor duração, ignora perigo ───────────
+        // ── 3. RÁPIDA → menor duração, ignora perigo ────────────────────────
         RotaOpcao rapida = candidatas.stream()
                 .min(Comparator.comparingDouble(RotaOpcao::getDuracaoMin))
                 .orElse(rotaDireta);
 
-        // ── 4. SEGURA → menor perigo, diferente da rápida ──────
+        // ── 4. SEGURA → menor perigo, com limite de desvio dinâmico ─────────
+        //
+        // O limite de tempo tolerável cresce conforme o perigo da rota direta:
+        //   perigo = 0  → aceita até 20% a mais  (rota já segura, não desvia à toa)
+        //   perigo = 5  → aceita até 85% a mais  (perigo moderado, vale desviar)
+        //   perigo = 10 → aceita até 150% a mais (perigo alto, segurança é prioridade)
+        //
+        // Isso evita desvios absurdos quando não há incidentes, mas preserva a
+        // prioridade de segurança quando a rota direta é realmente perigosa.
         final RotaOpcao rapidaFinal = rapida;
+        double fatorPerigo = Math.min(rotaDireta.getPerigo() / 10.0, 1.0);
+        double limiteToleravel = rotaDireta.getDuracaoMin() * (1.2 + fatorPerigo * 1.3);
 
         RotaOpcao segura = candidatas.stream()
                 .filter(r -> !rotasIguais(r, rapidaFinal))
                 .filter(r -> r.getPerigo() == 0.0)
+                .filter(r -> r.getDuracaoMin() <= limiteToleravel)
                 .min(Comparator.comparingDouble(RotaOpcao::getDuracaoMin))
                 .orElseGet(() -> {
                     double maxP = candidatas.stream().mapToDouble(RotaOpcao::getPerigo).max().orElse(1);
@@ -87,9 +111,11 @@ public class RotaService {
                     final double md = maxD == 0 ? 1 : maxD;
                     return candidatas.stream()
                             .filter(r -> !rotasIguais(r, rapidaFinal))
+                            .filter(r -> r.getDuracaoMin() <= limiteToleravel)
                             .min(Comparator.comparingDouble(r ->
-                                    0.9 * (r.getPerigo() / mp) +
-                                            0.1 * (r.getDuracaoMin() / md)))
+                                    0.7 * (r.getPerigo() / mp) +
+                                    0.3 * (r.getDuracaoMin() / md)))
+                            // Se nenhuma candidata cabe no limite, usa a rota direta
                             .orElse(rotaDireta);
                 });
 
@@ -179,7 +205,7 @@ public class RotaService {
 
     private double calcularPerigo(String wkt) {
         Double resultado = jdbcTemplate.queryForObject(
-                "SELECT calcular_perigo_rota(?, 300)", Double.class, wkt);
+                "SELECT calcular_perigo_rota(?, 500)", Double.class, wkt);
         return resultado != null ? resultado : 0.0;
     }
 
