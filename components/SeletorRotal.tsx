@@ -6,6 +6,7 @@ interface Props {
   rotas: RotaResponse;
   rotaSelecionada: TipoRota;
   onSelecionar: (tipo: TipoRota) => void;
+  onIniciar: () => void;
 }
 
 const CONFIG = {
@@ -28,42 +29,47 @@ const NIVEIS: Record<string, string> = {
   perigoso: "🔴",
 };
 
-export function SeletorRota({ rotas, rotaSelecionada, onSelecionar }: Props) {
+export function SeletorRota({ rotas, rotaSelecionada, onSelecionar, onIniciar }: Props) {
   const tipos: TipoRota[] = ["segura", "rapida"];
 
   return (
     <View style={styles.container}>
-      {tipos.map((tipo) => {
-        const chave =
-          `rota${tipo.charAt(0).toUpperCase() + tipo.slice(1)}` as keyof typeof rotas;
-        const rota = rotas[chave];
-        const config = CONFIG[tipo];
-        const ativa = tipo === rotaSelecionada;
+      <View style={styles.cards}>
+        {tipos.map((tipo) => {
+          const chave =
+            `rota${tipo.charAt(0).toUpperCase() + tipo.slice(1)}` as keyof typeof rotas;
+          const rota = rotas[chave];
+          const config = CONFIG[tipo];
+          const ativa = tipo === rotaSelecionada;
 
-        return (
-          <Pressable
-            key={tipo}
-            style={[
-              styles.card,
-              ativa && {
-                borderColor: config.cor,
-                backgroundColor: config.corFundo,
-              },
-            ]}
-            onPress={() => onSelecionar(tipo)}
-          >
-            <Text style={[styles.label, ativa && { color: config.cor }]}>
-              {config.label}
-            </Text>
-            <Text style={styles.info}>
-              {rota.distanciaKm.toFixed(1)} km · {rota.duracaoMin} min
-            </Text>
-            <Text style={styles.nivel}>
-              {NIVEIS[rota.nivelSeguranca] ?? "⚪"} {rota.nivelSeguranca}
-            </Text>
-          </Pressable>
-        );
-      })}
+          return (
+            <Pressable
+              key={tipo}
+              style={[
+                styles.card,
+                ativa && {
+                  borderColor: config.cor,
+                  backgroundColor: config.corFundo,
+                },
+              ]}
+              onPress={() => onSelecionar(tipo)}
+            >
+              <Text style={[styles.label, ativa && { color: config.cor }]}>
+                {config.label}
+              </Text>
+              <Text style={styles.info}>
+                {rota.distanciaKm.toFixed(1)} km · {rota.duracaoMin} min
+              </Text>
+              <Text style={styles.nivel}>
+                {NIVEIS[rota.nivelSeguranca] ?? "⚪"} {rota.nivelSeguranca}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Pressable style={styles.btnIniciar} onPress={onIniciar}>
+        <Text style={styles.btnIniciarText}>▶ Iniciar Navegação</Text>
+      </Pressable>
     </View>
   );
 }
@@ -74,9 +80,12 @@ const styles = StyleSheet.create({
     bottom: 32,
     left: 16,
     right: 16,
+    zIndex: 10,
+    gap: 8,
+  },
+  cards: {
     flexDirection: "row",
     gap: 8,
-    zIndex: 10,
   },
   card: {
     flex: 1,
@@ -105,5 +114,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#888",
     textTransform: "capitalize",
+  },
+  btnIniciar: {
+    backgroundColor: "#1A73E8",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  btnIniciarText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

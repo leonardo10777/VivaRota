@@ -1,17 +1,17 @@
+import { BotaoEmergencia } from "@/components/BotaoEmergencia";
 import { BuscaDestino } from "@/components/BuscaDestino";
 import { CardDetalheIncidente } from "@/components/CardDetalheIncidente";
 import { MarcadoresIncidentes } from "@/components/MarcadoresIncidentes";
 import { MenuLateral } from "@/components/MenuLateral";
 import { RotaMapa } from "@/components/RotaMapa";
 import { SeletorRota } from "@/components/SeletorRotal";
-import { BotaoEmergencia } from "@/components/BotaoEmergencia";
 import { useIncidentes } from "@/hooks/useIncidentes";
-import { Incidente } from "@/services/alertas";
 import { useRota } from "@/hooks/useRota";
+import { Incidente } from "@/services/alertas";
 import MapboxGL from "@rnmapbox/maps";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "");
@@ -21,6 +21,7 @@ export default function MapScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [menuAberto, setMenuAberto] = useState(false);
   const [incidenteSelecionado, setIncidenteSelecionado] = useState<Incidente | null>(null);
+  const [navegando, setNavegando] = useState(false);
   const cameraRef = useRef<MapboxGL.Camera>(null);
 
   const {
@@ -56,13 +57,46 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
+    let subscription: Location.LocationSubscription | null = null;
+    if (navegando) {
+      Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, distanceInterval: 5 },
+        (loc) => {
+          const novaPos: [number, number] = [loc.coords.longitude, loc.coords.latitude];
+          setLocation(novaPos);
+          cameraRef.current?.setCamera({
+            centerCoordinate: novaPos,
+            zoomLevel: 17,
+            animationDuration: 500,
+          });
+        }
+      ).then((sub) => { subscription = sub; });
+    }
+    return () => { subscription?.remove(); };
+  }, [navegando]);
+
+  const iniciarNavegacao = useCallback(() => {
+    setNavegando(true);
+    if (location) {
+      cameraRef.current?.setCamera({
+        centerCoordinate: location,
+        zoomLevel: 17,
+        animationDuration: 800,
+      });
+    }
+  }, [location]);
+
+  const pararNavegacao = useCallback(() => {
+    setNavegando(false);
+  }, []);
+
+  useEffect(() => {
     if (rotaAtiva && destino && location) {
       const origem = origemCustom ?? location;
       cameraRef.current?.fitBounds(destino, origem, [80, 80, 200, 80], 1000);
     }
   }, [rotaAtiva]);
 
-  // Move câmera quando origem custom muda
   useEffect(() => {
     if (origemCustom) {
       cameraRef.current?.setCamera({
@@ -127,46 +161,52 @@ export default function MapScreen() {
         )}
       </MapboxGL.MapView>
 
-      {/* Botão recentralizar */}
-      <TouchableOpacity
-        style={styles.btnLocalizacao}
-        onPress={voltarParaLocalizacao}
-      >
-        <Text style={styles.btnIcon}>📍</Text>
-      </TouchableOpacity>
+     <TouchableOpacity
+  style={styles.btnLocalizacao}
+  onPress={voltarParaLocalizacao}
+>
+  <Text style={styles.btnIcon}>📍</Text>
+</TouchableOpacity>
 
-      {/* Botão reportar incidente */}
       <TouchableOpacity
-        style={styles.btnReportar}
-        onPress={() => router.push("/reportar-incidente")}
-      >
-        <Text style={styles.btnIcon}>⚠️</Text>
-      </TouchableOpacity>
+  style={styles.btnReportar}
+  onPress={() => router.push("/reportar-incidente")}
+>
+  <Text style={styles.btnIcon}>⚠️</Text>
+</TouchableOpacity>
 
-      {/* Botão SOS */}
       <BotaoEmergencia />
 
-      <BuscaDestino
-        onBuscarTexto={(endereco) => buscarRota(endereco, location)}
-        onBuscarCoordenadas={(coords) => buscarRotaPorCoordenadas(coords, location)}
-        onDefinirOrigemTexto={(endereco) => definirOrigemCustom(endereco, location)}
-        onDefinirOrigemCoordenadas={definirOrigemPorCoordenadas}
-        onLimpar={limparRota}
-        onAbrirMenu={() => setMenuAberto(true)}
-        carregando={carregando}
-        distancia={distancia}
-        duracao={duracao}
-        erro={erro}
-        localizacaoUsuario={location}
-        origemCustom={origemCustom}
-      />
+      {!navegando && (
+        <BuscaDestino
+          onBuscarTexto={(endereco) => buscarRota(endereco, location)}
+          onBuscarCoordenadas={(coords) => buscarRotaPorCoordenadas(coords, location)}
+          onDefinirOrigemTexto={(endereco) => definirOrigemCustom(endereco, location)}
+          onDefinirOrigemCoordenadas={definirOrigemPorCoordenadas}
+          onLimpar={limparRota}
+          onAbrirMenu={() => setMenuAberto(true)}
+          carregando={carregando}
+          distancia={distancia}
+          duracao={duracao}
+          erro={erro}
+          localizacaoUsuario={location}
+          origemCustom={origemCustom}
+        />
+      )}
 
-      {rotas && (
+      {rotas && !navegando && (
         <SeletorRota
           rotas={rotas}
           rotaSelecionada={rotaSelecionada}
           onSelecionar={setRotaSelecionada}
+          onIniciar={iniciarNavegacao}
         />
+      )}
+
+      {navegando && (
+        <TouchableOpacity style={styles.btnParar} onPress={pararNavegacao}>
+          <Text style={styles.btnPararText}>⏹ Parar Navegação</Text>
+        </TouchableOpacity>
       )}
 
       {incidenteSelecionado && (
@@ -218,4 +258,24 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   btnIcon: { fontSize: 22 },
+  btnParar: {
+    position: "absolute",
+    bottom: 32,
+    left: 16,
+    right: 16,
+    backgroundColor: "#E63946",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  btnPararText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
 });
