@@ -22,7 +22,7 @@ Permite que usuários reportem incidentes em tempo real (assaltos, falta de ilum
 
 O backend já está hospedado no Railway e o banco no Supabase — **não precisa configurar nada além dos passos abaixo.**
 
-### Opção 1 — Terminal
+### Opção 1 — Mac/Linux (Terminal)
 
 ```bash
 # 1. Clone o repositório
@@ -47,7 +47,37 @@ npx expo start
 
 ---
 
-### Opção 2 — VSCode
+### Opção 2 — Windows (CMD)
+
+```cmd
+git clone https://github.com/K4u4z/VivaRota.git
+cd VivaRota
+copy .env.example .env
+npm install
+npx expo start
+```
+
+6. No terminal aparecerá um QR code — pressione **`s`** para modo development build
+7. Abra o app VivaRota no celular e escaneie o QR code
+
+---
+
+### Opção 3 — Windows (PowerShell)
+
+```powershell
+git clone https://github.com/K4u4z/VivaRota.git
+cd VivaRota
+Copy-Item .env.example .env
+npm install
+npx expo start
+```
+
+6. No terminal aparecerá um QR code — pressione **`s`** para modo development build
+7. Abra o app VivaRota no celular e escaneie o QR code
+
+---
+
+### Opção 4 — VSCode (qualquer sistema)
 
 1. Abra o VSCode
 2. Clique em **View → Command Palette** (ou `Ctrl+Shift+P` / `Cmd+Shift+P`)
@@ -55,14 +85,7 @@ npx expo start
 4. Cole a URL: `https://github.com/K4u4z/VivaRota.git` e escolha onde salvar
 5. Quando perguntar se deseja abrir o repositório, clique em **"Open"**
 6. Abra o terminal integrado: **Terminal → New Terminal** (ou `Ctrl+` `` ` ``)
-7. Execute os comandos:
-
-```bash
-cp .env.example .env
-npm install
-npx expo start
-```
-
+7. Execute os comandos conforme seu sistema operacional (Opção 1, 2 ou 3 acima)
 8. No terminal aparecerá um QR code — pressione **`s`** para modo development build
 9. Abra o app VivaRota no celular e escaneie o QR code
 
