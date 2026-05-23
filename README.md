@@ -6,9 +6,15 @@ Permite que usuários reportem incidentes em tempo real (assaltos, falta de ilum
 
 ---
 
-## 📱 APK Android (Development Build)
+## 📱 Testar o App (Android)
 
 > **[⬇️ Download do APK](https://expo.dev/accounts/leo.work2077/projects/VivaRota-App/builds/09362ffd-e24c-4e7b-ac59-e2c27c654218)**
+
+> ⚠️ **Importante:** O link do APK só funciona se você estiver **deslogado do Expo** ou abrindo em uma **aba anônima** do navegador.
+
+1. Acesse o link acima em aba anônima
+2. Baixe e instale o APK no Android
+3. Abra o app — backend e banco já estão em produção, não precisa configurar nada
 
 ---
 
@@ -18,7 +24,7 @@ Permite que usuários reportem incidentes em tempo real (assaltos, falta de ilum
 
 | Branch | Conteúdo |
 |--------|----------|
-| `main` / `develop` | Frontend React Native (base) |
+| `main` / `develop` | Frontend React Native |
 | `Versão1` | Backend Spring Boot |
 | `feature/mapa-rotas` | Mapa, rotas e integração com API |
 | `feature/login-cadastro` | Login, cadastro e onboarding |
@@ -61,7 +67,7 @@ Permite que usuários reportem incidentes em tempo real (assaltos, falta de ilum
 - Mapa Mapbox com localização do usuário em tempo real
 - Busca de endereço com autocomplete (Mapbox Geocoding API)
 - Cálculo de rota para pedestre (walking)
-- **Marcadores de incidentes reais** do banco aparecendo no mapa (integração completa)
+- **Marcadores de incidentes reais** do banco aparecendo no mapa
 - Cores por tipo: ASSALTO=vermelho, ASSÉDIO=vinho, SEM_ILUMINAÇÃO=laranja, ÁREA_ISOLADA=roxo, ACIDENTE=azul, OUTROS=cinza
 - Algoritmo de rota segura com score de perigo baseado em incidentes próximos (raio 700m)
 - Fator temporal: incidentes recentes pesam mais no cálculo de perigo
@@ -103,14 +109,14 @@ Permite que usuários reportem incidentes em tempo real (assaltos, falta de ilum
 | `tipo_incidente_peso` | Pesos dos tipos de incidente para cálculo de perigo |
 
 ### Recursos Especiais
-- **Trigger PostGIS** — preenche automaticamente a coluna `localizacao` (geography) a partir de latitude/longitude
-- **Function `calcular_perigo_rota`** — calcula score de perigo ao longo de uma rota com fator temporal (incidentes da última hora pesam 100%, últimas 6h pesam 70%, últimas 12h pesam 40%, mais antigos pesam 20%)
+- **Trigger PostGIS** — preenche automaticamente a coluna `localizacao` a partir de latitude/longitude
+- **Function `calcular_perigo_rota`** — calcula score de perigo ao longo de uma rota com fator temporal (última hora=100%, últimas 6h=70%, últimas 12h=40%, mais antigos=20%)
 
 ---
 
 ## 🔌 API Backend
 
-**Base URL:** `https://vivarota-production.up.railway.app`
+**Base URL (produção):** `https://vivarota-production.up.railway.app`
 
 **Swagger:** `https://vivarota-production.up.railway.app/swagger-ui/index.html`
 
@@ -127,64 +133,25 @@ Permite que usuários reportem incidentes em tempo real (assaltos, falta de ilum
 | POST | `/rotas/calcular` | JWT | Calcular rota segura e rápida com score de perigo |
 | GET | `/usuarios/{id}` | JWT | Dados do usuário |
 
-### Exemplo de resposta POST /rotas/calcular
-```json
-{
-  "rotaSegura": {
-    "coordenadas": [[-46.692, -23.681], ...],
-    "distanciaKm": 1.8,
-    "duracaoMin": 22,
-    "pontuacaoPerigo": 0.0,
-    "nivelSeguranca": "seguro",
-    "tipo": "segura"
-  },
-  "rotaRapida": {
-    "coordenadas": [[-46.692, -23.681], ...],
-    "distanciaKm": 1.6,
-    "duracaoMin": 20,
-    "pontuacaoPerigo": 3.0,
-    "nivelSeguranca": "atencao",
-    "tipo": "rapida"
-  }
-}
-```
-
 ---
 
-## ⚙️ Como Rodar Localmente
+## 💻 Rodar Localmente (para devs do time)
 
 ### Pré-requisitos
-- Java 17+
 - Node.js 18+
-- PostgreSQL 17 + PostGIS (ou conta no Supabase)
-- Expo CLI + EAS CLI
-- App "VivaRota" instalado no celular Android (APK acima)
+- App VivaRota instalado no celular Android (APK acima)
 
-### 1. Backend
+### Frontend
 
 ```bash
 # Clone o repositório
 git clone https://github.com/K4u4z/VivaRota.git
-cd VivaRota/VivaRota
+cd VivaRota
 
-# Configure o banco em src/main/resources/application.properties
-# (substitua pelas suas credenciais)
-
-# Inicie o backend
-./mvnw spring-boot:run
-# API disponível em http://localhost:8080
-# Swagger: http://localhost:8080/swagger-ui/index.html
-```
-
-### 2. Frontend
-
-```bash
-cd VivaRota-App
-
-# Crie o arquivo .env na raiz
-echo "EXPO_PUBLIC_MAPBOX_TOKEN=seu_token_mapbox" > .env
-echo "EXPO_PUBLIC_API_URL=https://vivarota-production.up.railway.app" >> .env
-# Ou use IP local: echo "EXPO_PUBLIC_API_URL=http://SEU_IP:8080" >> .env
+# Copie o arquivo de variáveis de ambiente
+cp .env.example .env
+# O .env.example já vem com a URL do Railway e o token Mapbox preenchidos
+# Não precisa alterar nada!
 
 # Instale dependências
 npm install
@@ -195,7 +162,20 @@ npx expo start
 # Escaneie o QR code com o app VivaRota instalado no celular
 ```
 
-> **Dica:** Para descobrir seu IP local no Mac: `ipconfig getifaddr en0`
+> ✅ O backend já está rodando no Railway — não precisa subir nada localmente!
+
+### Backend (opcional — só se quiser rodar local)
+
+```bash
+# Entre na branch do backend
+git checkout Versão1
+cd VivaRota
+
+# Configure src/main/resources/application.properties com suas credenciais
+# Inicie o backend
+./mvnw spring-boot:run
+# API disponível em http://localhost:8080
+```
 
 ---
 
@@ -203,48 +183,19 @@ npx expo start
 
 ```
 VivaRota/
-├── VivaRota/                  ← Backend Spring Boot
+├── VivaRota/                  ← Backend Spring Boot (branch Versão1)
 │   └── src/main/java/.../
-│       ├── config/            ← SecurityConfig, SecurityFilter, CORS, DatabaseSeeder
+│       ├── config/            ← SecurityConfig, SecurityFilter, CORS
 │       ├── controller/        ← Auth, Incidente, Rota, Usuario
 │       ├── services/          ← Lógica de negócio + integração Mapbox
 │       ├── entities/          ← Entidades JPA com PostGIS
 │       └── repository/        ← Spring Data JPA
 │
-└── VivaRota-App/              ← Frontend React Native
+└── VivaRota-App/              ← Frontend React Native (branch main)
     ├── app/                   ← Telas (Expo Router)
     ├── components/            ← MarkerIncidente, RotaMapa, BuscaDestino
     ├── hooks/                 ← useRota, useIncidentes
     └── services/              ← api.ts, alertas.ts, mapbox.ts
-```
-
----
-
-## 🔐 Variáveis de Ambiente
-
-### Frontend (`.env` — não vai para o git)
-```
-EXPO_PUBLIC_MAPBOX_TOKEN=pk.eyJ1...   # Token público Mapbox
-EXPO_PUBLIC_API_URL=https://vivarota-production.up.railway.app
-```
-
-### Backend (`application.properties`)
-```properties
-spring.datasource.url=jdbc:postgresql://...
-spring.datasource.username=...
-spring.datasource.password=...
-api.security.token.secret=...
-mapbox.token=pk.eyJ1...
-```
-
-### Railway (variáveis de ambiente em produção)
-```
-SPRING_DATASOURCE_URL=jdbc:postgresql://...
-SPRING_DATASOURCE_USERNAME=...
-SPRING_DATASOURCE_PASSWORD=...
-JWT_SECRET=...
-MAPBOX_TOKEN=...
-SERVER_PORT=8080
 ```
 
 ---
