@@ -1,249 +1,254 @@
-# 🗺️ VivaRota
+# VivaRota 🗺️
 
-Aplicativo mobile de navegação segura para pedestres. Permite reportar incidentes em tempo real (assaltos, falta de iluminação, áreas isoladas) e receber rotas que desviam dessas áreas de risco.
+**Aplicativo mobile de navegação segura para pedestres em São Paulo.**
+
+Permite que usuários reportem incidentes em tempo real (assaltos, falta de iluminação, áreas isoladas) e recebam rotas que desviam dessas áreas de risco. Similar ao Waze, mas focado na segurança do pedestre.
+
+---
+
+## 📱 APK Android (Development Build)
+
+> **[⬇️ Download do APK](https://expo.dev/accounts/leo.work2077/projects/VivaRota-App/builds/09362ffd-e24c-4e7b-ac59-e2c27c654218)**
+
+---
+
+## 🔗 Repositório
+
+**GitHub:** [https://github.com/K4u4z/VivaRota](https://github.com/K4u4z/VivaRota)
+
+| Branch | Conteúdo |
+|--------|----------|
+| `main` / `develop` | Frontend React Native (base) |
+| `Versão1` | Backend Spring Boot |
+| `feature/mapa-rotas` | Mapa, rotas e integração com API |
+| `feature/login-cadastro` | Login, cadastro e onboarding |
+| `feature/perfil-usuario` | Tela inicial e perfil do usuário |
+| `feature/notificacoes` | Reportar incidentes, SOS e notificações |
+
+---
+
+## 🛠️ Stack de Tecnologias
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Frontend | React Native + Expo (Development Build) |
+| Mapa | Mapbox (`@rnmapbox/maps`) |
+| Backend | Spring Boot v4.0.5 (Java 17) |
+| Banco de Dados | PostgreSQL 17 + PostGIS 3.6 |
+| ORM | Hibernate + Hibernate Spatial |
+| Autenticação | JWT |
+| Build | EAS (Expo Application Services) |
+| Hospedagem Backend | Railway |
+| Hospedagem Banco | Supabase |
 
 ---
 
 ## 👥 Time
 
-| Membro | Responsabilidade |
-|--------|-----------------|
-| Leonardo Santana | Mapa e Rotas |
-| Kauã Diodato | Mapa e Rotas |
-| Kelvin Vargas | Login, Cadastro e Onboarding |
-| Matheus Marinho | Tela inicial e Perfil do usuário |
-| Nicolas Ferreira | Reportar incidentes, Notificações e SOS |
+| Membro | Branch | Responsabilidade |
+|--------|--------|-----------------|
+| Leo | `feature/mapa-rotas` | Mapa e Rotas |
+| Kauã | `feature/mapa-rotas` | Mapa e Rotas |
+| Kelvin Vargas | `feature/login-cadastro` | Login, Cadastro e Onboarding |
+| Matheus Marinho | `feature/perfil-usuario` | Tela inicial e Perfil do usuário |
+| Nicolas | `feature/notificacoes` | Reportar incidentes, Notificações e SOS |
 
 ---
 
-## 🛠️ Stack
+## 🚀 Funcionalidades Implementadas
 
-| Camada | Tecnologia |
+### Mapa e Rotas (`feature/mapa-rotas`) ✅
+- Mapa Mapbox com localização do usuário em tempo real
+- Busca de endereço com autocomplete (Mapbox Geocoding API)
+- Cálculo de rota para pedestre (walking)
+- **Marcadores de incidentes reais** do banco aparecendo no mapa (integração completa)
+- Cores por tipo: ASSALTO=vermelho, ASSÉDIO=vinho, SEM_ILUMINAÇÃO=laranja, ÁREA_ISOLADA=roxo, ACIDENTE=azul, OUTROS=cinza
+- Algoritmo de rota segura com score de perigo baseado em incidentes próximos (raio 700m)
+- Fator temporal: incidentes recentes pesam mais no cálculo de perigo
+- Níveis de segurança: **Seguro** (0), **Atenção** (≤3), **Moderado** (≤7), **Perigoso** (>7)
+- Polling automático a cada 30 segundos para novos incidentes
+
+### Login e Cadastro (`feature/login-cadastro`) ✅
+- Slides de onboarding com swipe
+- Tela de boas-vindas
+- Formulário de login e cadastro com validação
+- Armazenamento seguro do JWT com `expo-secure-store`
+
+### Perfil do Usuário (`feature/perfil-usuario`) ✅
+- Card de perfil com avatar, reputação e estatísticas
+- Conquistas do usuário
+
+### Notificações e SOS (`feature/notificacoes`) ✅
+- Grid de tipos de incidente com GPS automático
+- Detalhe de alerta com botões "Confirmar" e "Já passou"
+- Cadastro de até 5 contatos de emergência
+- Botão SOS com contagem regressiva 3s, animação ripple e vibração
+- Lista de notificações
+
+---
+
+## 🗄️ Banco de Dados
+
+**PostgreSQL 17 + PostGIS 3.6** hospedado no Supabase.
+
+### Tabelas Principais
+
+| Tabela | Descrição |
 |--------|-----------|
-| Frontend | React Native + Expo |
-| Mapa | Mapbox |
-| Backend | Spring Boot (Java 17) |
-| Banco | PostgreSQL 17 + PostGIS |
-| Autenticação | JWT |
-| Build | EAS (Expo Application Services) |
+| `usuarios` | Dados dos usuários com geolocalização (PostGIS) |
+| `incidentes` | Ocorrências reportadas com tipo, coordenadas e expiração |
+| `rotas` | Histórico de rotas calculadas |
+| `contatos_emergencia` | Contatos de emergência por usuário |
+| `acionamentos_sos` | Registros de acionamento do botão SOS |
+| `tipo_incidente_peso` | Pesos dos tipos de incidente para cálculo de perigo |
+
+### Recursos Especiais
+- **Trigger PostGIS** — preenche automaticamente a coluna `localizacao` (geography) a partir de latitude/longitude
+- **Function `calcular_perigo_rota`** — calcula score de perigo ao longo de uma rota com fator temporal (incidentes da última hora pesam 100%, últimas 6h pesam 70%, últimas 12h pesam 40%, mais antigos pesam 20%)
 
 ---
 
-## 📁 Estrutura de Branches
+## 🔌 API Backend
 
+**Base URL:** `https://vivarota-production.up.railway.app`
+
+**Swagger:** `https://vivarota-production.up.railway.app/swagger-ui/index.html`
+
+### Endpoints Principais
+
+| Método | Endpoint | Auth | Descrição |
+|--------|----------|------|-----------|
+| POST | `/auth/login` | Público | Login, retorna JWT |
+| POST | `/auth/cadastrar` | Público | Cadastro de usuário |
+| GET | `/incidentes` | Público | Lista todos os incidentes |
+| GET | `/incidentes/proximos?lat=&lng=&raio=` | Público | Incidentes num raio (metros) |
+| POST | `/incidentes` | JWT | Reportar novo incidente |
+| PATCH | `/incidentes/{id}/confirmar` | Público | Confirmar alerta |
+| POST | `/rotas/calcular` | JWT | Calcular rota segura e rápida com score de perigo |
+| GET | `/usuarios/{id}` | JWT | Dados do usuário |
+
+### Exemplo de resposta POST /rotas/calcular
+```json
+{
+  "rotaSegura": {
+    "coordenadas": [[-46.692, -23.681], ...],
+    "distanciaKm": 1.8,
+    "duracaoMin": 22,
+    "pontuacaoPerigo": 0.0,
+    "nivelSeguranca": "seguro",
+    "tipo": "segura"
+  },
+  "rotaRapida": {
+    "coordenadas": [[-46.692, -23.681], ...],
+    "distanciaKm": 1.6,
+    "duracaoMin": 20,
+    "pontuacaoPerigo": 3.0,
+    "nivelSeguranca": "atencao",
+    "tipo": "rapida"
+  }
+}
 ```
-main       ← Frontend completo (React Native)
-Versão1    ← Backend completo (Spring Boot)
-develop    ← Branch de desenvolvimento do frontend
-```
 
 ---
 
-## ✅ Pré-requisitos
+## ⚙️ Como Rodar Localmente
 
-- [Java JDK 17+](https://adoptium.net)
-- [Node.js 18+](https://nodejs.org)
-- [PostgreSQL 17+](https://www.postgresql.org/download)
-- [Git](https://git-scm.com)
-- Conta no [Expo](https://expo.dev)
-- Conta no [Mapbox](https://mapbox.com)
+### Pré-requisitos
+- Java 17+
+- Node.js 18+
+- PostgreSQL 17 + PostGIS (ou conta no Supabase)
+- Expo CLI + EAS CLI
+- App "VivaRota" instalado no celular Android (APK acima)
 
----
-
-## 🚀 Como Rodar
-
-### 1. Clone o repositório
+### 1. Backend
 
 ```bash
-mkdir ~/VivaRota && cd ~/VivaRota
+# Clone o repositório
+git clone https://github.com/K4u4z/VivaRota.git
+cd VivaRota/VivaRota
 
-# Frontend
-git clone https://github.com/K4u4z/VivaRota.git VivaRota-App
-cd VivaRota-App && git checkout main && npm install && cd ..
+# Configure o banco em src/main/resources/application.properties
+# (substitua pelas suas credenciais)
 
-# Backend
-git clone https://github.com/K4u4z/VivaRota.git VivaRota
-cd VivaRota && git checkout Versão1
+# Inicie o backend
+./mvnw spring-boot:run
+# API disponível em http://localhost:8080
+# Swagger: http://localhost:8080/swagger-ui/index.html
+```
+
+### 2. Frontend
+
+```bash
+cd VivaRota-App
+
+# Crie o arquivo .env na raiz
+echo "EXPO_PUBLIC_MAPBOX_TOKEN=seu_token_mapbox" > .env
+echo "EXPO_PUBLIC_API_URL=https://vivarota-production.up.railway.app" >> .env
+# Ou use IP local: echo "EXPO_PUBLIC_API_URL=http://SEU_IP:8080" >> .env
+
+# Instale dependências
+npm install
+
+# Inicie o Expo
+npx expo start
+# Pressione 's' para development build
+# Escaneie o QR code com o app VivaRota instalado no celular
+```
+
+> **Dica:** Para descobrir seu IP local no Mac: `ipconfig getifaddr en0`
+
+---
+
+## 📐 Arquitetura
+
+```
+VivaRota/
+├── VivaRota/                  ← Backend Spring Boot
+│   └── src/main/java/.../
+│       ├── config/            ← SecurityConfig, SecurityFilter, CORS, DatabaseSeeder
+│       ├── controller/        ← Auth, Incidente, Rota, Usuario
+│       ├── services/          ← Lógica de negócio + integração Mapbox
+│       ├── entities/          ← Entidades JPA com PostGIS
+│       └── repository/        ← Spring Data JPA
+│
+└── VivaRota-App/              ← Frontend React Native
+    ├── app/                   ← Telas (Expo Router)
+    ├── components/            ← MarkerIncidente, RotaMapa, BuscaDestino
+    ├── hooks/                 ← useRota, useIncidentes
+    └── services/              ← api.ts, alertas.ts, mapbox.ts
 ```
 
 ---
 
-### 2. Configure o banco de dados
+## 🔐 Variáveis de Ambiente
 
-Crie o banco e ative o PostGIS:
-
-```sql
-CREATE DATABASE vivarota_db;
-\c vivarota_db
-CREATE EXTENSION postgis;
+### Frontend (`.env` — não vai para o git)
+```
+EXPO_PUBLIC_MAPBOX_TOKEN=pk.eyJ1...   # Token público Mapbox
+EXPO_PUBLIC_API_URL=https://vivarota-production.up.railway.app
 ```
 
-Suba o backend uma vez para o Hibernate criar as tabelas automaticamente, depois execute:
-
-```sql
--- Trigger que preenche localização PostGIS automaticamente
-CREATE OR REPLACE FUNCTION preencher_localizacao()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.localizacao = ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_preencher_localizacao
-BEFORE INSERT OR UPDATE ON incidentes
-FOR EACH ROW EXECUTE FUNCTION preencher_localizacao();
-
--- Trigger de localização dos usuários
-CREATE OR REPLACE FUNCTION preencher_localizacao_usuario()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
-    NEW.localizacao = ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_localizacao_usuario
-BEFORE INSERT OR UPDATE ON usuarios
-FOR EACH ROW EXECUTE FUNCTION preencher_localizacao_usuario();
-
--- Pesos dos tipos de incidente
-INSERT INTO tipo_incidente_peso VALUES
-  ('ASSALTO', 3), ('ASSEDIO', 3),
-  ('SEM_ILUMINACAO', 2), ('AREA_ISOLADA', 2),
-  ('ACIDENTE', 1), ('OUTROS', 1)
-ON CONFLICT DO NOTHING;
-
--- Function de score de perigo da rota
-CREATE OR REPLACE FUNCTION calcular_perigo_rota(rota_wkt TEXT, raio_metros FLOAT DEFAULT 100)
-RETURNS FLOAT AS $$
-DECLARE pontuacao FLOAT;
-BEGIN
-  SELECT COALESCE(SUM(sub.pontos), 0) INTO pontuacao
-  FROM (
-    SELECT tip.peso *
-      CASE
-        WHEN i.criado_em > NOW() - INTERVAL '1 hour'   THEN 1.0
-        WHEN i.criado_em > NOW() - INTERVAL '6 hours'  THEN 0.7
-        WHEN i.criado_em > NOW() - INTERVAL '12 hours' THEN 0.4
-        ELSE 0.2
-      END *
-      COUNT(*) OVER (PARTITION BY i.tipo,
-        CASE
-          WHEN i.criado_em > NOW() - INTERVAL '1 hour'   THEN '1h'
-          WHEN i.criado_em > NOW() - INTERVAL '6 hours'  THEN '6h'
-          WHEN i.criado_em > NOW() - INTERVAL '12 hours' THEN '12h'
-          ELSE 'antigo'
-        END
-      ) AS pontos
-    FROM incidentes i
-    JOIN tipo_incidente_peso tip ON tip.tipo = i.tipo
-    WHERE i.expira_em > NOW()
-    AND ST_DWithin(i.localizacao, ST_GeogFromText(rota_wkt), raio_metros)
-  ) sub;
-  RETURN pontuacao;
-END;
-$$ LANGUAGE plpgsql;
-```
-
----
-
-### 3. Configure o backend
-
-Em `src/main/resources/application.properties`:
-
+### Backend (`application.properties`)
 ```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/vivarota_db
-spring.datasource.username=postgres
-spring.datasource.password=SUA_SENHA
-api.security.token.secret=SUA_CHAVE_SECRETA
-mapbox.token=pk.SEU_TOKEN_MAPBOX
+spring.datasource.url=jdbc:postgresql://...
+spring.datasource.username=...
+spring.datasource.password=...
+api.security.token.secret=...
+mapbox.token=pk.eyJ1...
+```
+
+### Railway (variáveis de ambiente em produção)
+```
+SPRING_DATASOURCE_URL=jdbc:postgresql://...
+SPRING_DATASOURCE_USERNAME=...
+SPRING_DATASOURCE_PASSWORD=...
+JWT_SECRET=...
+MAPBOX_TOKEN=...
+SERVER_PORT=8080
 ```
 
 ---
 
-### 4. Configure o frontend
+## 📄 Licença
 
-Crie o arquivo `.env` na raiz de `VivaRota-App`:
-
-```bash
-EXPO_PUBLIC_MAPBOX_TOKEN=pk.SEU_TOKEN_MAPBOX
-EXPO_PUBLIC_API_URL=http://SEU_IP:8080
-```
-
-Para descobrir seu IP:
-```bash
-# Mac
-ipconfig getifaddr en0
-
-# Windows
-ipconfig
-# Pegar o IPv4 da rede Wi-Fi
-```
-
----
-
-### 5. Rode o projeto
-
-> **Ordem obrigatória:** PostgreSQL → Backend → Frontend
-
-**Backend** (nova aba do terminal):
-```bash
-# Mac
-cd ~/VivaRota/VivaRota && ./mvnw spring-boot:run
-
-# Windows
-cd %USERPROFILE%\VivaRota\VivaRota && mvnw.cmd spring-boot:run
-```
-
-**Frontend** (outra aba do terminal):
-```bash
-cd ~/VivaRota/VivaRota-App && npx expo start --clear
-```
-
-Apertar `s` para modo development build e escanear o QR code com o celular Android.
-
-> O celular precisa estar na **mesma rede Wi-Fi** que o computador.
-
----
-
-## 📱 APK de Desenvolvimento
-
-Instale o APK no celular Android:
-[Download APK](https://expo.dev/accounts/leo.work2077/projects/VivaRota-App/builds/09362ffd-e24c-4e7b-ac59-e2c27c654218)
-
-Para gerar um novo APK:
-```bash
-cd ~/VivaRota/VivaRota-App
-eas build --profile development --platform android
-```
-
----
-
-## ⚙️ Funcionalidades
-
-- 🗺️ Mapa em tempo real com localização do usuário
-- 🔍 Busca de destino com autocomplete
-- 🛡️ Rota segura desviando de áreas de risco
-- ⚡ Rota rápida pelo caminho mais curto
-- 📍 Marcadores de incidentes por tipo e cor
-- ⚠️ Reportar incidentes com GPS automático
-- 🔔 Notificações de alertas próximos
-- 🆘 Botão SOS com contagem regressiva
-- 👤 Perfil do usuário com histórico
-- 🔐 Autenticação com JWT
-
----
-
-## ❗ Problemas Comuns
-
-| Erro | Solução |
-|------|---------|
-| `Connection refused` no celular | IP mudou — atualizar `.env` com novo IP |
-| `Network Error` no app | Backend não está rodando |
-| `403 Forbidden` | Endpoint não liberado no `SecurityConfig.java` |
-| Marcadores não aparecem | Incidentes expirados — renovar no banco |
-| `lock file already exists` (Mac) | `rm /usr/local/var/postgresql@17/postmaster.pid` |
-| Celular não acessa backend (Windows) | Liberar porta 8080 no Windows Defender Firewall |
+Projeto acadêmico desenvolvido para a disciplina de Desenvolvimento Mobile — SENAC São Paulo, 2026.
