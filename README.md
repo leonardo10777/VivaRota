@@ -42,7 +42,7 @@ npm install
 npx expo start
 ```
 
-6. No terminal aparecerá um QR code — pressione **`s`** para modo development build
+6. No terminal aparecerá um QR code — pressione **`s`** para modo development build (se não estiver nesse modo) se já estiver só Scanear
 7. Abra o app VivaRota no celular e escaneie o QR code
 
 ---
@@ -57,7 +57,7 @@ npm install
 npx expo start
 ```
 
-6. No terminal aparecerá um QR code — pressione **`s`** para modo development build
+6. No terminal aparecerá um QR code — pressione **`s`** para modo development build (se não estiver nesse modo) se já estiver só Scanear
 7. Abra o app VivaRota no celular e escaneie o QR code
 
 ---
@@ -72,7 +72,7 @@ npm install
 npx expo start
 ```
 
-6. No terminal aparecerá um QR code — pressione **`s`** para modo development build
+6. No terminal aparecerá um QR code — pressione **`s`** para modo development build (se não estiver nesse modo) se já estiver só Scanear
 7. Abra o app VivaRota no celular e escaneie o QR code
 
 ---
@@ -86,7 +86,7 @@ npx expo start
 5. Quando perguntar se deseja abrir o repositório, clique em **"Open"**
 6. Abra o terminal integrado: **Terminal → New Terminal** (ou `Ctrl+` `` ` ``)
 7. Execute os comandos conforme seu sistema operacional (Opção 1, 2 ou 3 acima)
-8. No terminal aparecerá um QR code — pressione **`s`** para modo development build
+8. No terminal aparecerá um QR code — pressione **`s`** para modo development build (se não estiver nesse modo) se já estiver só Scanear
 9. Abra o app VivaRota no celular e escaneie o QR code
 
 ---
