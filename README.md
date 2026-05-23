@@ -8,7 +8,8 @@ Permite que usuários reportem incidentes em tempo real (assaltos, falta de ilum
 
 ## 📱 Testar o App (Android)
 
-> **[⬇️ Download do APK](https://expo.dev/accounts/leo.work2077/projects/VivaRota-App/builds/09362ffd-e24c-4e7b-ac59-e2c27c654218)**
+> **[⬇️ Download do APK](https://expo.dev/accounts/kauaz17/projects/VivaRota-App/builds/525423ec-bc93-426a-981a-7daf1d038f11)**
+https://expo.dev/accounts/kauaz17/projects/VivaRota-App/builds/525423ec-bc93-426a-981a-7daf1d038f11
 
 > ⚠️ **Importante:** O link do APK só funciona se você estiver **deslogado do Expo** ou abrindo em uma **aba anônima** do navegador.
 
